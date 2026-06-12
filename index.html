@@ -125,8 +125,13 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 .sp{width:38px;height:38px;border:4px solid #a7f3d0;border-top-color:#0d9488;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:480px){.wrap{padding:10px 8px 40px}.logo-title{font-size:1.6rem}}
-</style>
-</head>
+
+.cal-cell.seld{border-color:#6366f1;background:#eef2ff}
+.sec-add{border:none;background:#ecfdf5;color:#047857;font-weight:800;font-size:.72rem;padding:4px 10px;border-radius:9px;cursor:pointer;font-family:inherit}
+.sec-add:hover{background:#d1fae5}
+.opt-box{display:flex;gap:6px;align-items:center;font-size:.8rem;font-weight:600}
+.dom-inp{width:64px;padding:7px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:inherit;outline:none;text-align:center}
+</style></head>
 <body>
 <div id="ov"><div class="sp"></div><span>연결 중…</span></div>
 <header>
@@ -145,34 +150,29 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div class="sum-badges" id="sumBadges"></div>
   </div>
   <div class="foot-btns">
-    <button class="fbtn pri" onclick="openAdd()">➕ 오늘 할 일 추가</button>
-    <button class="fbtn sec2" onclick="openManage()">🧺 루틴 관리</button>
+    <button class="fbtn pri" onclick="openAdd()">➕ 집안일 추가</button>
+    <button class="fbtn sec2" onclick="openManage()">🧺 집안일 목록</button>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><span class="sec-title">📆 캘린더</span><div style="display:flex;gap:7px;align-items:center"><button class="cal-nav" onclick="calNav(-1)">◀</button><span id="calLabel" style="font-weight:800;font-size:.82rem"></span><button class="cal-nav" onclick="calNav(1)">▶</button></div></div>
+    <div class="cal-grid2" id="calGrid"></div>
+    <div class="legend"><span style="color:#10b981">● 완료</span><span style="color:#f87171">○ 놓침</span><span>◌ 예정</span><span>· 날짜를 누르면 아래에 상세</span></div>
+  </div>
+  <div class="sec" id="dayPanelSec">
+    <div class="sec-h"><span class="sec-title" id="dayTitle">📌 오늘 할 일</span><button class="sec-add" onclick="openAdd('date')">＋ 이날 추가</button></div>
+    <div id="listDay"></div>
   </div>
   <div class="sec overdue" id="secOverdue" style="display:none">
     <div class="sec-h"><span class="sec-title">⚠️ 밀린 일</span><span class="sec-sub">지난 7일 중 놓친 일</span></div>
     <div id="listOverdue"></div>
   </div>
-  <div class="sec">
-    <div class="sec-h"><span class="sec-title">📌 오늘 할 일</span><span class="sec-sub" id="todayLabel"></span></div>
-    <div id="listToday"></div>
-  </div>
   <div class="sec" id="secWeekly">
-    <div class="sec-h"><span class="sec-title">🗓️ 이번주 안에</span><span class="sec-sub">이번주 중 아무 날이나 한 번</span></div>
+    <div class="sec-h"><span class="sec-title">🗓️ 이번주 안에</span><button class="sec-add" onclick="openAdd('week')">＋ 추가</button></div>
     <div id="listWeekly"></div>
   </div>
   <div class="sec" id="secMonthly">
     <div class="sec-h"><span class="sec-title">📅 이번달 안에</span><span class="sec-sub" id="monthLabel"></span></div>
     <div id="listMonthly"></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><span class="sec-title">📋 이번주 현황</span><span class="sec-sub" id="weekLabel"></span></div>
-    <div class="wk-scroll" id="weekGrid"></div>
-    <div class="legend"><span style="color:#10b981">● 완료</span><span style="color:#f87171">✕ 놓침</span><span>◌ 예정</span></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><span class="sec-title">📆 월간 보기</span><div style="display:flex;gap:7px;align-items:center"><button class="cal-nav" onclick="calNav(-1)">◀</button><span id="calLabel" style="font-weight:800;font-size:.82rem"></span><button class="cal-nav" onclick="calNav(1)">▶</button></div></div>
-    <div class="cal-grid2" id="calGrid"></div>
-    <div class="legend"><span style="color:#10b981">● 완료</span><span style="color:#f87171">○ 놓침</span><span>◌ 예정</span><span>· 날짜를 누르면 상세 보기</span></div>
   </div>
 </div>
 <div class="modal-bg" id="whoBg">
@@ -184,46 +184,38 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 </div>
 <div class="modal-bg" id="manageBg" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
-    <h3>🧺 루틴 관리</h3>
-    <p class="modal-sub">반복되는 집안일을 등록하면 매일 자동으로 할 일에 떠요</p>
+    <h3>🧺 등록된 집안일</h3>
+    <p class="modal-sub">반복 루틴 목록이에요. 새로 만들 땐 ‘➕ 집안일 추가’를 눌러줘요</p>
     <div id="rtList"></div>
-    <div class="add-form">
-      <div class="f-label">새 루틴 추가</div>
-      <div class="frow"><input class="f-inp" id="rtName" placeholder="예: 설거지" maxlength="20"/><input class="f-inp" id="rtEmoji" placeholder="이모지" maxlength="2" style="flex:0 0 70px;min-width:70px;text-align:center"/></div>
-      <div class="f-label">얼마나 자주?</div>
-      <div class="seg" id="freqSeg">
-        <button data-f="daily" class="on">매일</button>
-        <button data-f="days">특정 요일</button>
-        <button data-f="weekly">주 1회 (아무 날)</button>
-        <button data-f="monthly">월 1회 (아무 날)</button>
-      </div>
-      <div class="daypick" id="dayPick" style="display:none"></div>
-      <div class="f-label">담당</div>
-      <div class="seg" id="ownSeg">
-        <button data-o="any" class="on">같이 / 아무나</button>
-        <button data-o="kh"></button>
-        <button data-o="jn"></button>
-      </div>
-      <button class="mbtn mok" onclick="addRoutine()">추가하기</button>
-      <div id="rtMsg" style="font-size:.74rem;color:#dc2626;min-height:14px;text-align:center"></div>
-    </div>
     <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('manageBg').classList.remove('show')">닫기</button></div>
   </div>
 </div>
 <div class="modal-bg" id="addBg" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
-    <h3>➕ 오늘 할 일 추가</h3>
-    <p class="modal-sub">오늘 하루만 필요한 일 (루틴은 ‘루틴 관리’에서)</p>
-    <input class="f-inp" id="xName" placeholder="예: 택배 반품 보내기" maxlength="30" style="width:100%"/>
-    <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('addBg').classList.remove('show')">취소</button><button class="mbtn mok" onclick="addExtra()">추가</button></div>
-  </div>
-</div>
-<div class="modal-bg" id="dayBg" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="modal">
-    <h3 id="dayTitle"></h3>
-    <p class="modal-sub">지난 날 일은 늦게라도 체크할 수 있어요</p>
-    <div id="dayList"></div>
-    <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('dayBg').classList.remove('show')">닫기</button></div>
+    <h3>➕ 집안일 추가</h3>
+    <p class="modal-sub">한 번만 하는 일도, 반복되는 일도 여기서</p>
+    <div class="frow"><input class="f-inp" id="xName" placeholder="예: 설거지, 택배 반품…" maxlength="24"/><input class="f-inp" id="xEmoji" placeholder="이모지" maxlength="2" style="flex:0 0 70px;min-width:70px;text-align:center"/></div>
+    <div class="f-label" style="margin-top:10px">언제 할 일이에요?</div>
+    <div class="seg" id="typeSeg" style="margin-top:6px">
+      <button data-t="date" class="on">특정 날짜 (한 번)</button>
+      <button data-t="week">이번주 안에 (한 번)</button>
+      <button data-t="days">매주 특정 요일</button>
+      <button data-t="monthday">매달 같은 날짜</button>
+      <button data-t="daily">매일</button>
+      <button data-t="weekly">매주 1회 (아무 날)</button>
+      <button data-t="monthly">매달 1회 (아무 날)</button>
+    </div>
+    <div id="optDate" class="opt-box" style="margin-top:8px"><input type="date" class="f-inp" id="xDate" style="flex:0 0 170px"/></div>
+    <div id="optDays" class="daypick" style="display:none;margin-top:8px"></div>
+    <div id="optDom" class="opt-box" style="display:none;margin-top:8px">매달 <input type="number" class="dom-inp" id="xDom" min="1" max="31" value="1"/> 일 (말일보다 크면 말일에 떠요)</div>
+    <div class="f-label" style="margin-top:10px">담당</div>
+    <div class="seg" id="xOwnSeg" style="margin-top:6px">
+      <button data-o="any" class="on">같이 / 아무나</button>
+      <button data-o="kh"></button>
+      <button data-o="jn"></button>
+    </div>
+    <div id="xMsg" style="font-size:.74rem;color:#dc2626;min-height:14px;text-align:center;margin-top:6px"></div>
+    <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('addBg').classList.remove('show')">취소</button><button class="mbtn mok" onclick="addUnified()">추가하기</button></div>
   </div>
 </div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -248,8 +240,9 @@ function mkAva(p,sz){return '<svg viewBox="0 0 80 80" style="width:'+sz+'px;heig
 function josa(n,a,b){var c=n.charCodeAt(n.length-1);if(c<0xAC00||c>0xD7A3)return a;return (c-0xAC00)%28>0?a:b;}
 let me=localStorage.getItem('hp_who');
 if(me&&!MEMBERS[me])me=null;
-let routines={},doneLog={},extras={},loaded=0;
-let archDone={},archExtras={},listenStartK='0000-00-00',dayK=null;
+let routines={},doneLog={},extras={},weekTodos={},loaded=0;
+let archDone={},archExtras={},listenStartK='0000-00-00';
+let selDayK=todayK();
 let calY=new Date().getFullYear(),calM=new Date().getMonth();
 let monthCache={};
 function ownBdg(o){
@@ -259,17 +252,35 @@ function ownBdg(o){
 function freqLabel(r){
   if(r.freq==='daily')return '매일';
   if(r.freq==='days')return (r.days||[]).slice().sort().map(function(d){return WD[d];}).join('·')+'요일';
-  if(r.freq==='weekly')return '주 1회';
-  return '월 1회';
+  if(r.freq==='weekly')return '매주 1회';
+  if(r.freq==='monthday')return '매달 '+r.dom+'일';
+  return '매달 1회';
 }
 function isScheduled(r,dateK){
   if(r.createdK&&dateK<r.createdK)return false;
   if(r.freq==='daily')return true;
   if(r.freq==='days')return (r.days||[]).indexOf(parseK(dateK).getDay())>=0;
+  if(r.freq==='monthday'){
+    var d=parseK(dateK);var dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    return d.getDate()===Math.min(r.dom||1,dim);
+  }
   return false;
 }
+function isDated(r){return r.freq==='daily'||r.freq==='days'||r.freq==='monthday';}
 function doneEntry(dateK,id){var src=doneLog[dateK]||archDone[dateK];return src&&src[id]?src[id]:null;}
 function extrasAt(k){return extras[k]||archExtras[k]||{};}
+function weekDates(){
+  var d=new Date();d.setDate(d.getDate()-d.getDay());
+  var a=[];for(var i=0;i<7;i++){a.push(kStr(d));d.setDate(d.getDate()+1);}return a;
+}
+function findDoneInRange(id,keys){
+  for(var i=0;i<keys.length;i++){if(doneEntry(keys[i],id))return keys[i];}
+  return null;
+}
+function monthKeys(){
+  var pre=todayK().slice(0,7);
+  return Object.keys(doneLog).filter(function(k){return k.indexOf(pre)===0;});
+}
 function ensureMonth(y,m,cb){
   var pre=y+'-'+pad(m+1);
   if(monthCache[pre]){cb();return;}
@@ -285,21 +296,9 @@ function ensureMonth(y,m,cb){
     cb();
   });
 }
-function weekDates(){
-  var d=new Date();d.setDate(d.getDate()-d.getDay());
-  var a=[];for(var i=0;i<7;i++){a.push(kStr(d));d.setDate(d.getDate()+1);}return a;
-}
-function findDoneInRange(id,keys){
-  for(var i=0;i<keys.length;i++){if(doneEntry(keys[i],id))return keys[i];}
-  return null;
-}
-function monthKeys(){
-  var pre=todayK().slice(0,7);
-  return Object.keys(doneLog).filter(function(k){return k.indexOf(pre)===0;});
-}
-/* ───── render ───── */
+/* ───── rows ───── */
 function itemRow(opt){
-  var de=opt.de;var mc=de?MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981':'#10b981';
+  var de=opt.de;var mc=de&&MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981';
   var h='<div class="item'+(de?' done':'')+'" style="--mc:'+mc+'">';
   h+='<button class="ckb'+(de?' on':'')+'" onclick="'+opt.action+'">✓</button>';
   h+='<div class="item-body"><div class="item-name">'+(opt.emoji?opt.emoji+' ':'')+opt.name+'</div>';
@@ -312,22 +311,21 @@ function itemRow(opt){
   h+='</div>';
   return h;
 }
+/* ───── render ───── */
 function renderAll(){
   var tk=todayK();var wk=weekDates();var today=new Date();
-  document.getElementById('todayLabel').textContent=(today.getMonth()+1)+'월 '+today.getDate()+'일 ('+WD[today.getDay()]+')';
   document.getElementById('monthLabel').textContent=(today.getMonth()+1)+'월 마지막 날까지';
-  document.getElementById('weekLabel').textContent=wk[0].slice(5).replace('-','/')+' ~ '+wk[6].slice(5).replace('-','/');
-  /* overdue: last 7 days before today */
+  /* overdue */
   var ovH='',ovCnt=0;
   for(var i=7;i>=1;i--){
     var d=new Date();d.setDate(d.getDate()-i);var k=kStr(d);
     Object.keys(routines).forEach(function(id){
       var r=routines[id];
-      if(!isScheduled(r,k)||doneEntry(k,id))return;
+      if(!isDated(r)||!isScheduled(r,k)||doneEntry(k,id))return;
       ovCnt++;
       ovH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:null,dateBdg:(d.getMonth()+1)+'/'+d.getDate()+' ('+WD[d.getDay()]+')',action:"toggle('"+k+"','"+id+"')"});
     });
-    var ex=extras[k]||{};
+    var ex=extrasAt(k);
     Object.keys(ex).forEach(function(xid){
       if(doneEntry(k,xid))return;
       ovCnt++;
@@ -336,52 +334,52 @@ function renderAll(){
   }
   document.getElementById('secOverdue').style.display=ovCnt?'':'none';
   document.getElementById('listOverdue').innerHTML=ovH;
-  /* today */
-  var tH='',tTotal=0,tDone=0;
+  /* today progress */
+  var tTotal=0,tDone=0;
   Object.keys(routines).forEach(function(id){
-    var r=routines[id];if(!isScheduled(r,tk))return;
-    var de=doneEntry(tk,id);tTotal++;if(de)tDone++;
-    tH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,action:"toggle('"+tk+"','"+id+"')"});
+    var r=routines[id];if(!isDated(r)||!isScheduled(r,tk))return;
+    tTotal++;if(doneEntry(tk,id))tDone++;
   });
-  var tex=extras[tk]||{};
-  Object.keys(tex).forEach(function(xid){
-    var de=doneEntry(tk,xid);tTotal++;if(de)tDone++;
-    tH+=itemRow({name:tex[xid].name,emoji:'📍',owner:tex[xid].owner||'any',de:de,action:"toggle('"+tk+"','"+xid+"')",del:de?null:"delExtra('"+tk+"','"+xid+"')"});
-  });
-  document.getElementById('listToday').innerHTML=tH||'<div class="empty-row">오늘 등록된 집안일이 없어요</div>';
-  /* weekly */
-  var wH='',wRemain=0,hasWeekly=false;
-  Object.keys(routines).forEach(function(id){
-    var r=routines[id];if(r.freq!=='weekly')return;
-    hasWeekly=true;
-    var dk=findDoneInRange(id,wk);var de=dk?doneEntry(dk,id):null;
-    if(!de)wRemain++;
-    wH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':null,action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')"});
-  });
-  document.getElementById('secWeekly').style.display=hasWeekly?'':'none';
-  document.getElementById('listWeekly').innerHTML=wH;
-  /* monthly */
-  var mH='',mRemain=0,hasMonthly=false;var mks=monthKeys();
-  Object.keys(routines).forEach(function(id){
-    var r=routines[id];if(r.freq!=='monthly')return;
-    hasMonthly=true;
-    var dk=findDoneInRange(id,mks);var de=dk?doneEntry(dk,id):null;
-    if(!de)mRemain++;
-    mH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':null,action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')"});
-  });
-  document.getElementById('secMonthly').style.display=hasMonthly?'':'none';
-  document.getElementById('listMonthly').innerHTML=mH;
-  /* summary */
+  var tex=extrasAt(tk);
+  Object.keys(tex).forEach(function(xid){tTotal++;if(doneEntry(tk,xid))tDone++;});
   document.getElementById('sumCount').textContent=tDone+'/'+tTotal;
   document.getElementById('pbarFill').style.width=(tTotal?Math.round(tDone/tTotal*100):0)+'%';
+  /* weekly section: weekly routines + weekTodos */
+  var wH='',wRemain=0,hasW=false;
+  Object.keys(routines).forEach(function(id){
+    var r=routines[id];if(r.freq!=='weekly')return;
+    hasW=true;
+    var dk=findDoneInRange(id,wk);var de=dk?doneEntry(dk,id):null;
+    if(!de)wRemain++;
+    wH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매주 반복',action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')"});
+  });
+  Object.keys(weekTodos).forEach(function(id){
+    hasW=true;
+    var t=weekTodos[id];
+    var dk=findDoneInRange(id,wk);var de=dk?doneEntry(dk,id):null;
+    if(!de)wRemain++;
+    wH+=itemRow({name:t.name,emoji:t.emoji||'🗓️',owner:t.owner||'any',de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'이번주만',action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')",del:de?null:"delWeekTodo('"+id+"')"});
+  });
+  document.getElementById('listWeekly').innerHTML=wH||'<div class="empty-row">이번주 안에 할 일이 없어요</div>';
+  /* monthly */
+  var mH='',mRemain=0,hasM=false;var mks=monthKeys();
+  Object.keys(routines).forEach(function(id){
+    var r=routines[id];if(r.freq!=='monthly')return;
+    hasM=true;
+    var dk=findDoneInRange(id,mks);var de=dk?doneEntry(dk,id):null;
+    if(!de)mRemain++;
+    mH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매달 반복',action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')"});
+  });
+  document.getElementById('secMonthly').style.display=hasM?'':'none';
+  document.getElementById('listMonthly').innerHTML=mH;
+  /* badges */
   var bH='';
   bH+=ovCnt?'<span class="sbdg warn">⚠️ 밀린 일 '+ovCnt+'건</span>':'<span class="sbdg">밀린 일 없음 👍</span>';
   if(wRemain)bH+='<span class="sbdg">이번주 안에 '+wRemain+'건</span>';
   if(mRemain)bH+='<span class="sbdg">이번달 안에 '+mRemain+'건</span>';
   document.getElementById('sumBadges').innerHTML=bH;
-  renderWeekGrid(wk,tk);
   renderCal();
-  if(document.getElementById('dayBg').classList.contains('show'))renderDay();
+  renderDayPanel();
 }
 function renderCal(){
   var el=document.getElementById('calGrid');if(!el)return;
@@ -394,20 +392,27 @@ function renderCal(){
   for(var d=1;d<=dim;d++){
     var k=calY+'-'+pad(calM+1)+'-'+pad(d);
     var dow=new Date(calY,calM,d).getDay();
-    var dots=[];
+    var dots=[],handled={};
     Object.keys(routines).forEach(function(id){
       var r=routines[id];var de=doneEntry(k,id);
-      if(de)dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');
-      else if((r.freq==='daily'||r.freq==='days')&&isScheduled(r,k))dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');
+      if(de){handled[id]=1;dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');}
+      else if(isDated(r)&&isScheduled(r,k)){handled[id]=1;dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');}
     });
     var ex=extrasAt(k);
     Object.keys(ex).forEach(function(xid){
+      handled[xid]=1;
       var de=doneEntry(k,xid);
       if(de)dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');
       else dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');
     });
+    var dl=Object.assign({},archDone[k]||{},doneLog[k]||{});
+    Object.keys(dl).forEach(function(id){
+      if(handled[id])return;
+      var de=dl[id];
+      dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');
+    });
     var more=dots.length>6?'<div class="cal-more">+'+(dots.length-6)+'</div>':'';
-    h+='<div class="cal-cell'+(k===tk?' tdy':'')+(dow===0?' sun':dow===6?' sat':'')+'" onclick="openDay(\''+k+'\')"><div class="cal-dn">'+d+'</div><div class="cal-dots">'+dots.slice(0,6).join('')+'</div>'+more+'</div>';
+    h+='<div class="cal-cell'+(k===tk?' tdy':'')+(k===selDayK?' seld':'')+(dow===0?' sun':dow===6?' sat':'')+'" onclick="selectDay(\''+k+'\')"><div class="cal-dn">'+d+'</div><div class="cal-dots">'+dots.slice(0,6).join('')+'</div>'+more+'</div>';
   }
   el.innerHTML=h;
 }
@@ -415,47 +420,28 @@ function calNav(d){
   calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}
   ensureMonth(calY,calM,renderCal);
 }
-function openDay(k){dayK=k;renderDay();document.getElementById('dayBg').classList.add('show');}
-function renderDay(){
-  if(!dayK)return;
-  var k=dayK;var tk=todayK();var d=parseK(k);
-  document.getElementById('dayTitle').textContent='📆 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')';
+function selectDay(k){
+  selDayK=k;renderCal();renderDayPanel();
+  document.getElementById('dayPanelSec').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function renderDayPanel(){
+  var k=selDayK;var tk=todayK();var d=parseK(k);
+  var lbl=(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')';
+  document.getElementById('dayTitle').textContent=(k===tk?'📌 오늘 할 일 · ':'📆 ')+lbl;
   var h='';
   Object.keys(routines).forEach(function(id){
     var r=routines[id];var de=doneEntry(k,id);
-    if(!de&&!((r.freq==='daily'||r.freq==='days')&&isScheduled(r,k)))return;
+    if(!de&&!(isDated(r)&&isScheduled(r,k)))return;
     var act=k<=tk?"toggle('"+k+"','"+id+"')":"alert('아직 안 온 날이에요!')";
-    h+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:r.freq==='weekly'?'주 1회':r.freq==='monthly'?'월 1회':null,action:act});
+    h+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:freqLabel(r),action:act});
   });
   var ex=extrasAt(k);
   Object.keys(ex).forEach(function(xid){
     var de=doneEntry(k,xid);
     var act=k<=tk?"toggle('"+k+"','"+xid+"')":"alert('아직 안 온 날이에요!')";
-    h+=itemRow({name:ex[xid].name,emoji:'📍',owner:ex[xid].owner||'any',de:de,action:act,del:de?null:"delExtra('"+k+"','"+xid+"')"});
+    h+=itemRow({name:ex[xid].name,emoji:'📍',owner:ex[xid].owner||'any',de:de,meta:'이날만',action:act,del:de?null:"delExtra('"+k+"','"+xid+"')"});
   });
-  document.getElementById('dayList').innerHTML=h||'<div class="empty-row">이날 등록된 집안일이 없어요</div>';
-}
-function renderWeekGrid(wk,tk){
-  var ids=Object.keys(routines).filter(function(id){return routines[id].freq!=='monthly';});
-  if(!ids.length){document.getElementById('weekGrid').innerHTML='<div class="empty-row">루틴을 등록하면 표가 생겨요</div>';return;}
-  var h='<table class="wk"><thead><tr><th style="text-align:left">집안일</th>';
-  wk.forEach(function(k){var d=parseK(k);h+='<th class="'+(k===tk?'tdy':'')+'">'+WD[d.getDay()]+'<br>'+d.getDate()+'</th>';});
-  h+='</tr></thead><tbody>';
-  ids.forEach(function(id){
-    var r=routines[id];
-    h+='<tr><td class="rname">'+(r.emoji?r.emoji+' ':'')+r.name+'</td>';
-    wk.forEach(function(k){
-      var de=doneEntry(k,id);
-      var cell='';
-      if(de){var c=MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981';cell='<span class="cell-dot" style="background:'+c+'"></span>';}
-      else if(r.freq==='weekly'){cell=k<=tk?'':'';}
-      else if(isScheduled(r,k)){cell=k<tk?'<span class="cell-miss">✕</span>':'<span class="cell-due"></span>';}
-      h+='<td>'+cell+'</td>';
-    });
-    h+='</tr>';
-  });
-  h+='</tbody></table>';
-  document.getElementById('weekGrid').innerHTML=h;
+  document.getElementById('listDay').innerHTML=h||'<div class="empty-row">이날 등록된 집안일이 없어요. ‘＋ 이날 추가’로 등록해봐요!</div>';
 }
 /* ───── actions ───── */
 async function toggle(dateK,id){
@@ -465,26 +451,92 @@ async function toggle(dateK,id){
     if(cur){await db.ref(ROOT+'/done/'+dateK+'/'+id).remove();}
     else{
       await db.ref(ROOT+'/done/'+dateK+'/'+id).set({by:me,ts:Date.now()});
-      var nm=routines[id]?routines[id].name:((extras[dateK]||{})[id]||{}).name;
-      if(nm)db.ref(ROOT+'/notifications').push({ts:Date.now(),p:me,name:nm});
+      var nm=routines[id]?routines[id].name:(extrasAt(dateK)[id]||weekTodos[id]||{}).name;
+      if(nm)db.ref(ROOT+'/notifications').push({ts:Date.now(),p:me,name:nm,act:'done'});
     }
     if(dateK<listenStartK){delete monthCache[dateK.slice(0,7)];ensureMonth(+dateK.slice(0,4),+dateK.slice(5,7)-1,renderAll);}
   }catch(e){alert('저장 실패: '+e.message);}
-}
-function openAdd(){document.getElementById('xName').value='';document.getElementById('addBg').classList.add('show');document.getElementById('xName').focus();}
-async function addExtra(){
-  var nm=document.getElementById('xName').value.trim();
-  if(!nm)return;
-  await db.ref(ROOT+'/extras/'+todayK()).push({name:nm,owner:'any'});
-  document.getElementById('addBg').classList.remove('show');
 }
 async function delExtra(dateK,xid){
   if(!confirm('이 할 일을 삭제할까?'))return;
   await db.ref(ROOT+'/extras/'+dateK+'/'+xid).remove();
   await db.ref(ROOT+'/done/'+dateK+'/'+xid).remove();
+  if(dateK<listenStartK){delete monthCache[dateK.slice(0,7)];ensureMonth(+dateK.slice(0,4),+dateK.slice(5,7)-1,renderAll);}
 }
-/* ───── routine manage ───── */
-var fFreq='daily',fDays=[],fOwn='any';
+async function delWeekTodo(id){
+  if(!confirm('이 할 일을 삭제할까?'))return;
+  var wk=weekDates();
+  await db.ref(ROOT+'/weekTodos/'+wk[0]+'/'+id).remove();
+  for(var i=0;i<wk.length;i++){if(doneEntry(wk[i],id))await db.ref(ROOT+'/done/'+wk[i]+'/'+id).remove();}
+}
+/* ───── unified add ───── */
+var xType='date',xDays=[],xOwn='any';
+function openAdd(preset){
+  xType=preset==='week'?'week':'date';
+  document.getElementById('xName').value='';
+  document.getElementById('xEmoji').value='';
+  document.getElementById('xMsg').textContent='';
+  document.getElementById('xDate').value=selDayK;
+  document.querySelectorAll('#typeSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.t===xType);});
+  syncAddOpts();
+  document.getElementById('addBg').classList.add('show');
+  document.getElementById('xName').focus();
+}
+function syncAddOpts(){
+  document.getElementById('optDate').style.display=xType==='date'?'flex':'none';
+  document.getElementById('optDays').style.display=xType==='days'?'flex':'none';
+  document.getElementById('optDom').style.display=xType==='monthday'?'flex':'none';
+}
+async function addUnified(){
+  var nm=document.getElementById('xName').value.trim();
+  var em=document.getElementById('xEmoji').value.trim();
+  var msg=document.getElementById('xMsg');
+  if(!me){openWho();return;}
+  if(!nm){msg.textContent='이름을 입력해줘!';return;}
+  try{
+    if(xType==='date'){
+      var dk=document.getElementById('xDate').value;
+      if(!dk){msg.textContent='날짜를 골라줘!';return;}
+      await db.ref(ROOT+'/extras/'+dk).push({name:nm,owner:xOwn,emoji:em||null});
+      if(dk<listenStartK){delete monthCache[dk.slice(0,7)];ensureMonth(+dk.slice(0,4),+dk.slice(5,7)-1,renderAll);}
+      selectDay(dk);
+      if(dk.slice(0,7)!==(calY+'-'+pad(calM+1))){calY=+dk.slice(0,4);calM=+dk.slice(5,7)-1;ensureMonth(calY,calM,renderCal);}
+    }else if(xType==='week'){
+      await db.ref(ROOT+'/weekTodos/'+weekDates()[0]).push({name:nm,owner:xOwn,emoji:em||null});
+    }else{
+      var obj={name:nm,emoji:em||'🧹',freq:xType,owner:xOwn,createdK:todayK()};
+      if(xType==='days'){
+        if(!xDays.length){msg.textContent='요일을 하나 이상 골라줘!';return;}
+        obj.days=xDays.slice().sort();
+      }
+      if(xType==='monthday'){
+        var dom=parseInt(document.getElementById('xDom').value,10);
+        if(!dom||dom<1||dom>31){msg.textContent='1~31 사이 날짜를 넣어줘!';return;}
+        obj.dom=dom;
+      }
+      await db.ref(ROOT+'/routines').push(obj);
+    }
+    db.ref(ROOT+'/notifications').push({ts:Date.now(),p:me,name:nm,act:'add'});
+    document.getElementById('addBg').classList.remove('show');
+  }catch(e){msg.textContent='저장 실패: '+e.message;}
+}
+function initAddForm(){
+  document.querySelectorAll('#typeSeg button').forEach(function(b){
+    b.onclick=function(){xType=b.dataset.t;document.querySelectorAll('#typeSeg button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');syncAddOpts();};
+  });
+  var dp=document.getElementById('optDays');
+  WD.forEach(function(w,i){
+    var b=document.createElement('button');b.textContent=w;
+    b.onclick=function(){var ix=xDays.indexOf(i);if(ix>=0){xDays.splice(ix,1);b.classList.remove('on');}else{xDays.push(i);b.classList.add('on');}};
+    dp.appendChild(b);
+  });
+  var os=document.querySelectorAll('#xOwnSeg button');
+  os[1].textContent=MEMBERS.kh.name;os[2].textContent=MEMBERS.jn.name;
+  os.forEach(function(b){
+    b.onclick=function(){xOwn=b.dataset.o;os.forEach(function(x){x.classList.remove('on');});b.classList.add('on');};
+  });
+}
+/* ───── manage list ───── */
 function openManage(){renderRtList();document.getElementById('manageBg').classList.add('show');}
 function renderRtList(){
   var h='';
@@ -492,42 +544,13 @@ function renderRtList(){
     var r=routines[id];
     h+='<div class="rt-row"><div class="rt-info"><div class="rt-name">'+(r.emoji?r.emoji+' ':'')+r.name+'</div><div class="rt-meta">'+freqLabel(r)+' · '+(r.owner==='any'?'같이':MEMBERS[r.owner].name)+'</div></div>'+ownBdg(r.owner)+'<button class="rt-del" onclick="delRoutine(\''+id+'\')">×</button></div>';
   });
-  document.getElementById('rtList').innerHTML=h||'<div class="empty-row">아직 루틴이 없어요</div>';
+  document.getElementById('rtList').innerHTML=h||'<div class="empty-row">아직 반복 루틴이 없어요</div>';
 }
 async function delRoutine(id){
   var r=routines[id];if(!r)return;
-  if(!confirm('\''+r.name+'\' 루틴을 삭제할까? (지난 기록은 표에서 사라져)'))return;
+  if(!confirm('\''+r.name+'\' 루틴을 삭제할까?'))return;
   await db.ref(ROOT+'/routines/'+id).remove();
   renderRtList();
-}
-async function addRoutine(){
-  var nm=document.getElementById('rtName').value.trim();
-  var em=document.getElementById('rtEmoji').value.trim()||'🧹';
-  var msg=document.getElementById('rtMsg');
-  if(!nm){msg.textContent='이름을 입력해줘!';return;}
-  if(fFreq==='days'&&!fDays.length){msg.textContent='요일을 하나 이상 골라줘!';return;}
-  msg.textContent='';
-  var obj={name:nm,emoji:em,freq:fFreq,owner:fOwn,createdK:todayK()};
-  if(fFreq==='days')obj.days=fDays.slice().sort();
-  await db.ref(ROOT+'/routines').push(obj);
-  document.getElementById('rtName').value='';document.getElementById('rtEmoji').value='';
-  renderRtList();
-}
-function initForm(){
-  document.querySelectorAll('#freqSeg button').forEach(function(b){
-    b.onclick=function(){fFreq=b.dataset.f;document.querySelectorAll('#freqSeg button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');document.getElementById('dayPick').style.display=fFreq==='days'?'flex':'none';};
-  });
-  var dp=document.getElementById('dayPick');
-  WD.forEach(function(w,i){
-    var b=document.createElement('button');b.textContent=w;
-    b.onclick=function(){var ix=fDays.indexOf(i);if(ix>=0){fDays.splice(ix,1);b.classList.remove('on');}else{fDays.push(i);b.classList.add('on');}};
-    dp.appendChild(b);
-  });
-  var os=document.querySelectorAll('#ownSeg button');
-  os[1].textContent=MEMBERS.kh.name;os[2].textContent=MEMBERS.jn.name;
-  os.forEach(function(b){
-    b.onclick=function(){fOwn=b.dataset.o;os.forEach(function(x){x.classList.remove('on');});b.classList.add('on');};
-  });
 }
 /* ───── who ───── */
 function openWho(){
@@ -571,7 +594,8 @@ function renderNotifs(){
   var html='';
   notifs.forEach(function(n){
     var m=MEMBERS[n.p];if(!m||!n.name)return;
-    var msg='<b style="color:'+m.dark+'">'+m.name+'</b>'+josa(m.name,'이','가')+' <b>'+n.name+'</b>'+josa(n.name,'을','를')+' 끝냈어요 ✨';
+    var tail=n.act==='add'?josa(n.name,'을','를')+' 새로 등록했어요 📝':josa(n.name,'을','를')+' 끝냈어요 ✨';
+    var msg='<b style="color:'+m.dark+'">'+m.name+'</b>'+josa(m.name,'이','가')+' <b>'+n.name+'</b>'+tail;
     html+='<div class="notif-item'+(n.ts>notifLastRead?' unread':'')+'"><div class="notif-ava" style="background:'+m.light+';border-color:'+m.color+'55">'+mkAva(n.p,24)+'</div><div class="notif-body"><div class="notif-msg">'+msg+'</div><div class="notif-time">'+relTime(n.ts)+'</div></div><div class="notif-dot"></div></div>';
   });
   panel.innerHTML=hdr+(html||empty);
@@ -602,6 +626,7 @@ db.ref(ROOT+'/routines').on('value',function(s){routines=s.val()||{};renderAll()
   var start=new Date();start.setDate(start.getDate()-40);var sk=kStr(start);listenStartK=sk;
   db.ref(ROOT+'/done').orderByKey().startAt(sk).on('value',function(s){doneLog={};s.forEach(function(c){doneLog[c.key]=c.val();});renderAll();checkLoaded();});
   db.ref(ROOT+'/extras').orderByKey().startAt(sk).on('value',function(s){extras={};s.forEach(function(c){extras[c.key]=c.val();});renderAll();checkLoaded();});
+  db.ref(ROOT+'/weekTodos/'+weekDates()[0]).on('value',function(s){weekTodos=s.val()||{};renderAll();});
 })();
 db.ref(ROOT+'/seeded').once('value',function(s){
   if(s.val())return;
@@ -617,7 +642,7 @@ db.ref(ROOT+'/seeded').once('value',function(s){
   ];
   defaults.forEach(function(r){db.ref(ROOT+'/routines').push(r);});
 });
-initForm();
+initAddForm();
 renderWho();
 if(!me)setTimeout(openWho,600);
 setInterval(function(){renderAll();renderNotifs();},60000);
