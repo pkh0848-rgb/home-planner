@@ -233,6 +233,7 @@ function freqLabel(r){
   return '월 1회';
 }
 function isScheduled(r,dateK){
+  if(r.createdK&&dateK<r.createdK)return false;
   if(r.freq==='daily')return true;
   if(r.freq==='days')return (r.days||[]).indexOf(parseK(dateK).getDay())>=0;
   return false;
@@ -405,7 +406,7 @@ async function addRoutine(){
   if(!nm){msg.textContent='이름을 입력해줘!';return;}
   if(fFreq==='days'&&!fDays.length){msg.textContent='요일을 하나 이상 골라줘!';return;}
   msg.textContent='';
-  var obj={name:nm,emoji:em,freq:fFreq,owner:fOwn};
+  var obj={name:nm,emoji:em,freq:fFreq,owner:fOwn,createdK:todayK()};
   if(fFreq==='days')obj.days=fDays.slice().sort();
   await db.ref(ROOT+'/routines').push(obj);
   document.getElementById('rtName').value='';document.getElementById('rtEmoji').value='';
@@ -504,13 +505,14 @@ db.ref(ROOT+'/routines').on('value',function(s){routines=s.val()||{};renderAll()
 db.ref(ROOT+'/seeded').once('value',function(s){
   if(s.val())return;
   db.ref(ROOT+'/seeded').set(true);
+  var ck=todayK();
   var defaults=[
-    {name:'설거지',emoji:'🍽️',freq:'daily',owner:'any'},
-    {name:'바닥 청소',emoji:'🧹',freq:'days',days:[0,3],owner:'any'},
-    {name:'분리수거',emoji:'♻️',freq:'days',days:[0],owner:'any'},
-    {name:'빨래',emoji:'👕',freq:'weekly',owner:'any'},
-    {name:'화장실 청소',emoji:'🚽',freq:'weekly',owner:'any'},
-    {name:'침구 세탁',emoji:'🛏️',freq:'monthly',owner:'any'}
+    {name:'설거지',emoji:'🍽️',freq:'daily',owner:'any',createdK:ck},
+    {name:'바닥 청소',emoji:'🧹',freq:'days',days:[0,3],owner:'any',createdK:ck},
+    {name:'분리수거',emoji:'♻️',freq:'days',days:[0],owner:'any',createdK:ck},
+    {name:'빨래',emoji:'👕',freq:'weekly',owner:'any',createdK:ck},
+    {name:'화장실 청소',emoji:'🚽',freq:'weekly',owner:'any',createdK:ck},
+    {name:'침구 세탁',emoji:'🛏️',freq:'monthly',owner:'any',createdK:ck}
   ];
   defaults.forEach(function(r){db.ref(ROOT+'/routines').push(r);});
 });
