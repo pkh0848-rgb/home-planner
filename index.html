@@ -120,6 +120,9 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 .daypick{display:flex;gap:4px}
 .daypick button{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
 .daypick button.on{background:#10b981;border-color:#10b981;color:#fff}
+#nthPick{display:flex;gap:4px;flex-wrap:wrap}
+#nthPick button{width:auto;height:30px;border-radius:9px;padding:0 9px;border:1.5px solid var(--border);background:#fff;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit}
+#nthPick button.on{background:#10b981;border-color:#10b981;color:#fff}
 .mbtn{padding:10px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.86rem;font-family:inherit;flex:1}
 .mok{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff}
 .mno{background:#f3f4f6;color:var(--text)}
@@ -207,6 +210,7 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
       <button data-t="week" id="tsWeek">이번주 안에 (한 번)</button>
       <button data-t="days">매주 특정 요일</button>
       <button data-t="monthday">매달 같은 날짜</button>
+      <button data-t="monthweek">매달 N째주 요일</button>
       <button data-t="daily">매일</button>
       <button data-t="weekly">매주 1회 (아무 날)</button>
       <button data-t="monthly">매달 1회 (아무 날)</button>
@@ -214,6 +218,7 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div id="optDate" class="opt-box" style="margin-top:8px"><input type="date" class="f-inp" id="xDate" style="flex:0 0 170px"/></div>
     <div id="optDays" class="daypick" style="display:none;margin-top:8px"></div>
     <div id="optDom" class="opt-box" style="display:none;margin-top:8px">매달 <input type="number" class="dom-inp" id="xDom" min="1" max="31" value="1"/> 일 (말일보다 크면 말일에 떠요)</div>
+    <div id="optMonthWeek" class="opt-box" style="display:none;margin-top:8px;flex-wrap:wrap">매달 <div class="daypick" id="nthPick"></div> 주 <select class="f-inp" id="xWd" style="flex:0 0 84px;min-width:84px"></select>요일</div>
     <div class="f-label" style="margin-top:10px">담당</div>
     <div class="seg" id="xOwnSeg" style="margin-top:6px">
       <button data-o="any" class="on">같이 / 아무나</button>
@@ -255,11 +260,13 @@ function ownBdg(o){
   if(o==='any'||!o)return '<span class="own-bdg" style="background:#f3f4f6;color:#6b7280">같이</span>';
   var m=MEMBERS[o];return '<span class="own-bdg" style="background:'+m.light+';color:'+m.dark+'">'+m.name+'</span>';
 }
+var NTHK=['','첫째','둘째','셋째','넷째'];
 function freqLabel(r){
   if(r.freq==='daily')return '매일';
   if(r.freq==='days')return (r.days||[]).slice().sort().map(function(d){return WD[d];}).join('·')+'요일';
   if(r.freq==='weekly')return '매주 1회';
   if(r.freq==='monthday')return '매달 '+r.dom+'일';
+  if(r.freq==='monthweek')return '매달 '+(r.nths||[r.nth||1]).slice().sort().map(function(n){return NTHK[n];}).join('·')+'주 '+WD[r.wd||0]+'요일';
   return '매달 1회';
 }
 function isScheduled(r,dateK){
@@ -270,9 +277,14 @@ function isScheduled(r,dateK){
     var d=parseK(dateK);var dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
     return d.getDate()===Math.min(r.dom||1,dim);
   }
+  if(r.freq==='monthweek'){
+    var d2=parseK(dateK);
+    var nths2=r.nths||[r.nth||1];
+    return d2.getDay()===(r.wd||0)&&nths2.indexOf(Math.ceil(d2.getDate()/7))>=0;
+  }
   return false;
 }
-function isDated(r){return r.freq==='daily'||r.freq==='days'||r.freq==='monthday';}
+function isDated(r){return r.freq==='daily'||r.freq==='days'||r.freq==='monthday'||r.freq==='monthweek';}
 function doneEntry(dateK,id){var src=doneLog[dateK]||archDone[dateK];return src&&src[id]?src[id]:null;}
 function extrasAt(k){return extras[k]||archExtras[k]||{};}
 function weekDates(){
@@ -496,7 +508,7 @@ async function delWeekTodo(id){
   for(var i=0;i<wk.length;i++){if(doneEntry(wk[i],id))await db.ref(ROOT+'/done/'+wk[i]+'/'+id).remove();}
 }
 /* ───── unified add ───── */
-var xType='date',xDays=[],xOwn='any',editId=null;
+var xType='date',xDays=[],xNths=[],xOwn='any',editId=null;
 function openAdd(preset,id){
   editId=id||null;
   document.getElementById('manageBg').classList.remove('show');
@@ -512,6 +524,8 @@ function openAdd(preset,id){
     document.getElementById('xName').value=r.name||'';
     document.getElementById('xEmoji').value=r.emoji||'';
     document.getElementById('xDom').value=r.dom||1;
+    xNths=(r.nths||(r.nth?[r.nth]:[])).slice();
+    document.getElementById('xWd').value=r.wd||0;
     document.getElementById('addTitle').textContent='✏️ 집안일 수정';
     document.getElementById('addOkBtn').textContent='수정하기';
   }else{
@@ -521,11 +535,14 @@ function openAdd(preset,id){
     document.getElementById('xEmoji').value='';
     document.getElementById('xDate').value=selDayK;
     document.getElementById('xDom').value=1;
+    xNths=[];
+    document.getElementById('xWd').value=0;
     document.getElementById('addTitle').textContent='➕ 집안일 추가';
     document.getElementById('addOkBtn').textContent='추가하기';
   }
   document.querySelectorAll('#typeSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.t===xType);});
   document.querySelectorAll('#optDays button').forEach(function(b,i){b.classList.toggle('on',xDays.indexOf(i)>=0);});
+  document.querySelectorAll('#nthPick button').forEach(function(b,i){b.classList.toggle('on',xNths.indexOf(i+1)>=0);});
   document.querySelectorAll('#xOwnSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.o===xOwn);});
   syncAddOpts();
   document.getElementById('addBg').classList.add('show');
@@ -535,6 +552,7 @@ function syncAddOpts(){
   document.getElementById('optDate').style.display=xType==='date'?'flex':'none';
   document.getElementById('optDays').style.display=xType==='days'?'flex':'none';
   document.getElementById('optDom').style.display=xType==='monthday'?'flex':'none';
+  document.getElementById('optMonthWeek').style.display=xType==='monthweek'?'flex':'none';
 }
 async function addUnified(){
   var nm=document.getElementById('xName').value.trim();
@@ -545,7 +563,7 @@ async function addUnified(){
   try{
     if(editId){
       if(xType==='date'||xType==='week'){msg.textContent='반복 종류를 골라줘!';return;}
-      var eobj={name:nm,emoji:em||'🧹',freq:xType,owner:xOwn,days:null,dom:null};
+      var eobj={name:nm,emoji:em||'🧹',freq:xType,owner:xOwn,days:null,dom:null,nth:null,nths:null,wd:null};
       if(xType==='days'){
         if(!xDays.length){msg.textContent='요일을 하나 이상 골라줘!';return;}
         eobj.days=xDays.slice().sort();
@@ -554,6 +572,11 @@ async function addUnified(){
         var edom=parseInt(document.getElementById('xDom').value,10);
         if(!edom||edom<1||edom>31){msg.textContent='1~31 사이 날짜를 넣어줘!';return;}
         eobj.dom=edom;
+      }
+      if(xType==='monthweek'){
+        if(!xNths.length){msg.textContent='몇째 주인지 하나 이상 골라줘!';return;}
+        eobj.nths=xNths.slice().sort();
+        eobj.wd=parseInt(document.getElementById('xWd').value,10);
       }
       await db.ref(ROOT+'/routines/'+editId).update(eobj);
       db.ref(ROOT+'/notifications').push({ts:Date.now(),p:me,name:nm,act:'edit'});
@@ -581,6 +604,11 @@ async function addUnified(){
         if(!dom||dom<1||dom>31){msg.textContent='1~31 사이 날짜를 넣어줘!';return;}
         obj.dom=dom;
       }
+      if(xType==='monthweek'){
+        if(!xNths.length){msg.textContent='몇째 주인지 하나 이상 골라줘!';return;}
+        obj.nths=xNths.slice().sort();
+        obj.wd=parseInt(document.getElementById('xWd').value,10);
+      }
       await db.ref(ROOT+'/routines').push(obj);
     }
     db.ref(ROOT+'/notifications').push({ts:Date.now(),p:me,name:nm,act:'add'});
@@ -596,6 +624,18 @@ function initAddForm(){
     var b=document.createElement('button');b.textContent=w;
     b.onclick=function(){var ix=xDays.indexOf(i);if(ix>=0){xDays.splice(ix,1);b.classList.remove('on');}else{xDays.push(i);b.classList.add('on');}};
     dp.appendChild(b);
+  });
+  var wdSel=document.getElementById('xWd');
+  WD.forEach(function(w,i){
+    var o=document.createElement('option');o.value=i;o.textContent=w;
+    wdSel.appendChild(o);
+  });
+  var np=document.getElementById('nthPick');
+  NTHK.slice(1).forEach(function(lbl,i){
+    var n=i+1;
+    var b=document.createElement('button');b.textContent=lbl;
+    b.onclick=function(){var ix=xNths.indexOf(n);if(ix>=0){xNths.splice(ix,1);b.classList.remove('on');}else{xNths.push(n);b.classList.add('on');}};
+    np.appendChild(b);
   });
   var os=document.querySelectorAll('#xOwnSeg button');
   os[1].textContent=MEMBERS.kh.name;os[2].textContent=MEMBERS.jn.name;
