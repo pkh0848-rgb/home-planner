@@ -1,229 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>🏠 우리집 플래너</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-:root{--bg:#f4faf7;--card:#fff;--text:#1f2937;--muted:#9ca3af;--border:#e5e7eb;--r:16px;--sh:0 4px 20px rgba(0,0,0,.07)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Pretendard',"Segoe UI","Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-header{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff;padding:18px 24px 14px;text-align:center;position:relative}
-.logo-title{font-family:'Pacifico',cursive;font-size:1.9rem;font-weight:400;letter-spacing:1px}
-header p{font-size:.82rem;opacity:.9;margin-top:3px}
-.who-chip{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:none;border-radius:20px;padding:4px 12px 4px 5px;cursor:pointer;color:#fff;font-size:.78rem;font-weight:700;font-family:inherit}
-.who-chip:hover{background:rgba(255,255,255,.3)}
-.who-ava{width:27px;height:27px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.notif-wrap{position:absolute;top:14px;right:14px;z-index:300}
-.notif-btn{background:rgba(255,255,255,.18);border:none;font-size:1.1rem;cursor:pointer;width:38px;height:38px;border-radius:50%;position:relative;color:#fff;line-height:1}
-.notif-btn:hover{background:rgba(255,255,255,.3)}
-.notif-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:.62rem;font-weight:800;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
-.notif-panel{display:none;position:absolute;right:0;top:46px;width:300px;max-height:380px;overflow-y:auto;background:#fff;border-radius:18px;box-shadow:0 12px 36px rgba(16,80,60,.18);padding:8px;text-align:left;color:var(--text)}
-.notif-panel.show{display:block;animation:slideDown .18s ease}
-@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-.notif-hdr{display:flex;align-items:baseline;gap:6px;padding:8px 12px 7px;border-bottom:1px solid var(--border);margin-bottom:4px}
-.notif-hdr-title{font-size:.88rem;font-weight:800}
-.notif-hdr-sub{font-size:.66rem;color:var(--muted);font-weight:500}
-.notif-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px}
-.notif-item.unread{background:#ecfdf5}
-.notif-ava{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid transparent}
-.notif-body{flex:1;min-width:0}
-.notif-msg{font-size:.8rem;font-weight:500;line-height:1.45;color:#3f3d56}
-.notif-msg b{font-weight:800}
-.notif-time{font-size:.66rem;color:var(--muted);margin-top:2px;font-weight:500}
-.notif-dot{width:7px;height:7px;border-radius:50%;background:#10b981;flex-shrink:0;opacity:0}
-.notif-item.unread .notif-dot{opacity:1}
-.notif-empty{padding:26px 18px;text-align:center;color:var(--muted);font-size:.78rem}
-.wrap{max-width:560px;margin:0 auto;padding:14px 14px 50px}
-.sum-card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:12px}
-.sum-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-.sum-title{font-weight:800;font-size:.95rem}
-.sum-count{font-size:.8rem;color:var(--muted);font-weight:700}
-.pbar{height:10px;background:#e8f5ef;border-radius:6px;overflow:hidden}
-.pbar>div{height:100%;background:linear-gradient(90deg,#34d399,#10b981);border-radius:6px;transition:width .4s;width:0}
-.sum-badges{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.sbdg{font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0fdf4;color:#166534}
-.sbdg.warn{background:#fef2f2;color:#b91c1c}
-.foot-btns{display:flex;gap:8px;margin-bottom:12px}
-.fbtn{flex:1;padding:11px;border:none;border-radius:12px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit}
-.fbtn.pri{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff}
-.fbtn.sec2{background:#fff;color:var(--text);box-shadow:var(--sh)}
-.sec{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:12px}
-.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.sec-title{font-weight:800;font-size:.92rem}
-.sec-sub{font-size:.7rem;color:var(--muted);font-weight:500}
-.sec.overdue{border:1.5px solid #fecaca;background:#fffbfb}
-.item{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid #f3f4f6}
-.item:last-child{border-bottom:none}
-.ckb{width:30px;height:30px;border-radius:50%;border:2.5px solid #d1d5db;background:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:transparent;font-size:.95rem;transition:all .15s;font-family:inherit}
-.ckb.on{border-color:var(--mc);background:var(--mc);color:#fff}
-.item-body{flex:1;min-width:0}
-.item-name{font-size:.88rem;font-weight:600}
-.item.done .item-name{text-decoration:line-through;color:var(--muted);font-weight:500}
-.item-meta{font-size:.68rem;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.own-bdg{font-size:.64rem;font-weight:700;padding:1.5px 7px;border-radius:10px}
-.date-bdg{font-size:.64rem;font-weight:700;color:#b91c1c;background:#fee2e2;padding:1.5px 7px;border-radius:10px}
-.by-ava{width:20px;height:20px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--mc);background:#fff}
-.del-x{width:24px;height:24px;border:none;border-radius:7px;background:#fef2f2;color:#f87171;cursor:pointer;font-size:.85rem;flex-shrink:0}
-.empty-row{color:var(--muted);font-size:.78rem;text-align:center;padding:10px 0}
-.wk-scroll{overflow-x:auto}
-table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
-.wk th{padding:5px 2px;color:var(--muted);font-weight:700;font-size:.66rem;border-bottom:1.5px solid var(--border)}
-.wk th.tdy{color:#0d9488}
-.wk td{text-align:center;padding:7px 2px;border-bottom:1px solid #f3f4f6}
-.wk td.rname{text-align:left;font-weight:600;font-size:.74rem;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
-.cell-dot{width:15px;height:15px;border-radius:50%;display:inline-block}
-.cell-miss{color:#f87171;font-weight:900;font-size:.82rem}
-.cell-due{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px dashed #cbd5e1}
-.legend{display:flex;gap:12px;margin-top:8px;font-size:.66rem;color:var(--muted)}
-.memo-box{margin-top:8px}
-.memo-ta{width:100%;min-height:64px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;font-size:.8rem;font-family:inherit;resize:vertical;box-sizing:border-box;color:var(--text);background:#fff}
-.cal-nav{background:#fff;border:1.5px solid var(--border);border-radius:9px;width:30px;height:30px;cursor:pointer;font-size:.75rem;font-family:inherit}
-.cal-nav:hover{border-color:#10b981}
-.cal-grid2{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-wd{text-align:center;font-size:.64rem;color:var(--muted);font-weight:700;padding:3px 0}
-.cal-cell{min-height:54px;border-radius:9px;background:#fafdfb;padding:4px 2px;cursor:pointer;border:1px solid transparent;transition:border-color .15s}
-.cal-cell:hover{border-color:#6ee7b7}
-.cal-cell.tdy{border-color:#10b981;background:#ecfdf5}
-.cal-dn{font-size:.7rem;font-weight:700;text-align:center}
-.cal-cell.sun .cal-dn{color:#ef4444}.cal-cell.sat .cal-dn{color:#3b82f6}
-.cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px}
-.cd{width:7px;height:7px;border-radius:50%;box-sizing:border-box}
-.cd.done{background:#10b981;border:none}
-.cd.miss{background:transparent;border:1.5px solid #f87171}
-.cd.due{background:transparent;border:1.5px solid #cbd5e1}
-.cal-more{font-size:.56rem;color:var(--muted);text-align:center;margin-top:1px}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:16px}
-.modal-bg.show{display:flex}
-.modal{background:#fff;border-radius:20px;padding:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
-.modal h3{font-size:1.05rem;font-weight:800;margin-bottom:4px}
-.modal-sub{font-size:.76rem;color:var(--muted);margin-bottom:12px}
-.who-btns{display:flex;gap:10px}
-.who-btn{flex:1;border:2.5px solid var(--border);border-radius:14px;background:#fff;padding:14px;cursor:pointer;text-align:center;font-family:inherit}
-.who-btn:hover{border-color:#10b981;background:#f0fdf4}
-.who-btn .nm{font-weight:800;margin-top:4px}
-.rt-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:.82rem}
-.rt-info{flex:1;min-width:0}
-.rt-name{font-weight:700}
-.rt-meta{font-size:.66rem;color:var(--muted);margin-top:1px}
-.rt-del{width:26px;height:26px;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:.9rem;flex-shrink:0}
-.add-form{margin-top:12px;border-top:2px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:9px}
-.f-label{font-size:.72rem;font-weight:700;color:#6b7280}
-.frow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.f-inp{flex:1;min-width:120px;padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:inherit;outline:none}
-.f-inp:focus{border-color:#10b981}
-.seg{display:flex;gap:4px;flex-wrap:wrap}
-.seg button{padding:6px 11px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit}
-.seg button.on{border-color:#10b981;background:#ecfdf5;color:#047857}
-.daypick{display:flex;gap:4px}
-.daypick button{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit}
-.daypick button.on{background:#10b981;border-color:#10b981;color:#fff}
-.mbtn{padding:10px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.86rem;font-family:inherit;flex:1}
-.mok{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff}
-.mno{background:#f3f4f6;color:var(--text)}
-.mfooter{display:flex;gap:8px;margin-top:14px}
-#ov{position:fixed;inset:0;background:rgba(255,255,255,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:999;font-size:1rem;font-weight:600;color:#0d9488}
-.sp{width:38px;height:38px;border:4px solid #a7f3d0;border-top-color:#0d9488;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:480px){.wrap{padding:10px 8px 40px}.logo-title{font-size:1.6rem}}
-
-.cal-cell.seld{border-color:#6366f1;background:#eef2ff}
-.sec-add{border:none;background:#ecfdf5;color:#047857;font-weight:800;font-size:.72rem;padding:4px 10px;border-radius:9px;cursor:pointer;font-family:inherit}
-.sec-add:hover{background:#d1fae5}
-.opt-box{display:flex;gap:6px;align-items:center;font-size:.8rem;font-weight:600}
-.dom-inp{width:64px;padding:7px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:inherit;outline:none;text-align:center}
-</style></head>
-<body>
-<div id="ov"><div class="sp"></div><span>연결 중…</span></div>
-<header>
-  <button class="who-chip" id="whoChip" onclick="openWho()"><span class="who-ava" id="whoAva">👤</span><span id="whoName">누구?</span></button>
-  <h1 class="logo-title">homeLog</h1>
-  <p>우리집 집안일 플래너 🧺</p>
-  <div class="notif-wrap" id="notifWrap">
-    <button class="notif-btn" id="notifBtn">🔔<span class="notif-badge" id="notifBadge" style="display:none"></span></button>
-    <div class="notif-panel" id="notifPanel"></div>
-  </div>
-</header>
-<div class="wrap">
-  <div class="sum-card">
-    <div class="sum-top"><span class="sum-title">오늘 진행률</span><span class="sum-count" id="sumCount">0/0</span></div>
-    <div class="pbar"><div id="pbarFill"></div></div>
-    <div class="sum-badges" id="sumBadges"></div>
-  </div>
-  <div class="foot-btns">
-    <button class="fbtn pri" onclick="openAdd()">➕ 집안일 추가</button>
-    <button class="fbtn sec2" onclick="openManage()">🧺 집안일 목록</button>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><span class="sec-title">📆 캘린더</span><div style="display:flex;gap:7px;align-items:center"><button class="cal-nav" onclick="calNav(-1)">◀</button><span id="calLabel" style="font-weight:800;font-size:.82rem"></span><button class="cal-nav" onclick="calNav(1)">▶</button></div></div>
-    <div class="cal-grid2" id="calGrid"></div>
-    <div class="legend"><span style="color:#10b981">● 완료</span><span style="color:#f87171">○ 놓침</span><span>◌ 예정</span><span>· 날짜를 누르면 아래에 상세</span></div>
-    <div class="memo-box">
-      <div class="sec-h" style="margin-bottom:6px"><span class="sec-title" style="font-size:.78rem">📝 이번달 메모</span></div>
-      <textarea id="monthMemo" class="memo-ta" placeholder="이번달 같이 쓰는 메모예요 (장보기, 약속, 할 일 등)" oninput="saveMemo()"></textarea>
-    </div>
-  <div class="sec" id="dayPanelSec">
-    <div class="sec-h"><span class="sec-title" id="dayTitle">📌 오늘 할 일</span><button class="sec-add" onclick="openAdd('date')">＋ 이날 추가</button></div>
-    <div id="listDay"></div>
-  </div>
-  <div class="sec overdue" id="secOverdue" style="display:none">
-    <div class="sec-h"><span class="sec-title">⚠️ 밀린 일</span><span class="sec-sub">지난 7일 중 놓친 일</span></div>
-    <div id="listOverdue"></div>
-  </div>
-  <div class="sec" id="secWeekly">
-    <div class="sec-h"><span class="sec-title">🗓️ 이번주 안에</span><button class="sec-add" onclick="openAdd('week')">＋ 추가</button></div>
-    <div id="listWeekly"></div>
-  </div>
-  <div class="sec" id="secMonthly">
-    <div class="sec-h"><span class="sec-title">📅 이번달 안에</span><span class="sec-sub" id="monthLabel"></span></div>
-    <div id="listMonthly"></div>
-  </div>
-</div>
-<div class="modal-bg" id="whoBg">
-  <div class="modal">
-    <h3>👋 누구세요?</h3>
-    <p class="modal-sub">이 기기에서 체크하면 이 이름으로 기록돼요</p>
-    <div class="who-btns" id="whoBtns"></div>
-  </div>
-</div>
-<div class="modal-bg" id="manageBg" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="modal">
-    <h3>🧺 등록된 집안일</h3>
-    <p class="modal-sub">반복 루틴 목록이에요. 새로 만들 땐 ‘➕ 집안일 추가’를 눌러줘요</p>
-    <div id="rtList"></div>
-    <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('manageBg').classList.remove('show')">닫기</button><button class="mbtn mok" onclick="openAdd('routine')">＋ 새 집안일 추가</button></div>
-  </div>
-</div>
-<div class="modal-bg" id="addBg" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="modal">
-    <h3 id="addTitle">➕ 집안일 추가</h3>
-    <p class="modal-sub">한 번만 하는 일도, 반복되는 일도 여기서</p>
-    <div class="frow"><input class="f-inp" id="xName" placeholder="예: 설거지, 택배 반품…" maxlength="24"/><input class="f-inp" id="xEmoji" placeholder="이모지" maxlength="2" style="flex:0 0 70px;min-width:70px;text-align:center"/></div>
-    <div class="f-label" style="margin-top:10px">언제 할 일이에요?</div>
-    <div class="seg" id="typeSeg" style="margin-top:6px">
-      <button data-t="date" id="tsDate" class="on">특정 날짜 (한 번)</button>
-      <button data-t="week" id="tsWeek">이번주 안에 (한 번)</button>
-      <button data-t="days">매주 특정 요일</button>
-      <button data-t="monthday">매달 같은 날짜</button>
-      <button data-t="daily">매일</button>
-      <button data-t="weekly">매주 1회 (아무 날)</button>
-      <button data-t="monthly">매달 1회 (아무 날)</button>
-    </div>
-    <div id="optDate" class="opt-box" style="margin-top:8px"><input type="date" class="f-inp" id="xDate" style="flex:0 0 170px"/></div>
-    <div id="optDays" class="daypick" style="display:none;margin-top:8px"></div>
-    <div id="optDom" class="opt-box" style="display:none;margin-top:8px">매달 <input type="number" class="dom-inp" id="xDom" min="1" max="31" value="1"/> 일 (말일보다 크면 말일에 떠요)</div>
-    <div class="f-label" style="margin-top:10px">담당</div>
-    <div class="seg" id="xOwnSeg" style="margin-top:6px">
-      <button data-o="any" class="on">같이 / 아무나</button>
-      <button data-o="kh"></button>
-      <button data-o="jn"></button>
-    </div>
-    <div id="xMsg" style="font-size:.74rem;color:#dc2626;min-height:14px;text-align:center;margin-top:6px"></div>
-    <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('addBg').classList.remove('show')">취소</button><button class="mbtn mok" id="addOkBtn" onclick="addUnified()">추가하기</button></div>
-  </div>
-</div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
@@ -390,7 +164,6 @@ function renderAll(){
 function renderCal(){
   var el=document.getElementById('calGrid');if(!el)return;
   document.getElementById('calLabel').textContent=calY+'년 '+(calM+1)+'월';
-  loadMemo();
   var tk=todayK();
   var fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate();
   var h='';
@@ -402,21 +175,21 @@ function renderCal(){
     var dots=[],handled={};
     Object.keys(routines).forEach(function(id){
       var r=routines[id];var de=doneEntry(k,id);
-      if(de){handled[id]=1;dots.push('<span class="cd done"></span>');}
+      if(de){handled[id]=1;dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');}
       else if(isDated(r)&&isScheduled(r,k)){handled[id]=1;dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');}
     });
     var ex=extrasAt(k);
     Object.keys(ex).forEach(function(xid){
       handled[xid]=1;
       var de=doneEntry(k,xid);
-      if(de)dots.push('<span class="cd done"></span>');
+      if(de)dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');
       else dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');
     });
     var dl=Object.assign({},archDone[k]||{},doneLog[k]||{});
     Object.keys(dl).forEach(function(id){
       if(handled[id])return;
       var de=dl[id];
-      dots.push('<span class="cd done"></span>');
+      dots.push('<span class="cd" style="background:'+(MEMBERS[de.by]?MEMBERS[de.by].color:'#10b981')+'"></span>');
     });
     var more=dots.length>6?'<div class="cal-more">+'+(dots.length-6)+'</div>':'';
     h+='<div class="cal-cell'+(k===tk?' tdy':'')+(k===selDayK?' seld':'')+(dow===0?' sun':dow===6?' sat':'')+'" onclick="selectDay(\''+k+'\')"><div class="cal-dn">'+d+'</div><div class="cal-dots">'+dots.slice(0,6).join('')+'</div>'+more+'</div>';
@@ -426,25 +199,6 @@ function renderCal(){
 function calNav(d){
   calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}
   ensureMonth(calY,calM,renderCal);
-}
-var memoRef=null,memoYM=null,memoTimer=null;
-function loadMemo(){
-  var ym=calY+'-'+pad(calM+1);
-  if(memoYM===ym)return;
-  memoYM=ym;
-  if(memoRef)memoRef.off();
-  memoRef=db.ref(ROOT+'/memos/'+ym);
-  var ta=document.getElementById('monthMemo');
-  memoRef.on('value',function(s){
-    if(document.activeElement!==ta)ta.value=s.val()||'';
-  });
-}
-function saveMemo(){
-  clearTimeout(memoTimer);
-  var ym=memoYM;
-  memoTimer=setTimeout(function(){
-    db.ref(ROOT+'/memos/'+ym).set(document.getElementById('monthMemo').value);
-  },500);
 }
 function selectDay(k){
   selDayK=k;renderCal();renderDayPanel();
@@ -496,37 +250,14 @@ async function delWeekTodo(id){
   for(var i=0;i<wk.length;i++){if(doneEntry(wk[i],id))await db.ref(ROOT+'/done/'+wk[i]+'/'+id).remove();}
 }
 /* ───── unified add ───── */
-var xType='date',xDays=[],xOwn='any',editId=null;
-function openAdd(preset,id){
-  editId=id||null;
-  document.getElementById('manageBg').classList.remove('show');
+var xType='date',xDays=[],xOwn='any';
+function openAdd(preset){
+  xType=preset==='week'?'week':'date';
+  document.getElementById('xName').value='';
+  document.getElementById('xEmoji').value='';
   document.getElementById('xMsg').textContent='';
-  var routineMode=!!(editId||preset==='routine');
-  document.getElementById('tsDate').style.display=routineMode?'none':'';
-  document.getElementById('tsWeek').style.display=routineMode?'none':'';
-  if(editId){
-    var r=routines[editId]||{};
-    xType=r.freq||'days';
-    xOwn=r.owner||'any';
-    xDays=(r.days||[]).slice();
-    document.getElementById('xName').value=r.name||'';
-    document.getElementById('xEmoji').value=r.emoji||'';
-    document.getElementById('xDom').value=r.dom||1;
-    document.getElementById('addTitle').textContent='✏️ 집안일 수정';
-    document.getElementById('addOkBtn').textContent='수정하기';
-  }else{
-    xType=preset==='week'?'week':(preset==='routine'?'days':'date');
-    xOwn='any';xDays=[];
-    document.getElementById('xName').value='';
-    document.getElementById('xEmoji').value='';
-    document.getElementById('xDate').value=selDayK;
-    document.getElementById('xDom').value=1;
-    document.getElementById('addTitle').textContent='➕ 집안일 추가';
-    document.getElementById('addOkBtn').textContent='추가하기';
-  }
+  document.getElementById('xDate').value=selDayK;
   document.querySelectorAll('#typeSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.t===xType);});
-  document.querySelectorAll('#optDays button').forEach(function(b,i){b.classList.toggle('on',xDays.indexOf(i)>=0);});
-  document.querySelectorAll('#xOwnSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.o===xOwn);});
   syncAddOpts();
   document.getElementById('addBg').classList.add('show');
   document.getElementById('xName').focus();
@@ -543,24 +274,6 @@ async function addUnified(){
   if(!me){openWho();return;}
   if(!nm){msg.textContent='이름을 입력해줘!';return;}
   try{
-    if(editId){
-      if(xType==='date'||xType==='week'){msg.textContent='반복 종류를 골라줘!';return;}
-      var eobj={name:nm,emoji:em||'🧹',freq:xType,owner:xOwn,days:null,dom:null};
-      if(xType==='days'){
-        if(!xDays.length){msg.textContent='요일을 하나 이상 골라줘!';return;}
-        eobj.days=xDays.slice().sort();
-      }
-      if(xType==='monthday'){
-        var edom=parseInt(document.getElementById('xDom').value,10);
-        if(!edom||edom<1||edom>31){msg.textContent='1~31 사이 날짜를 넣어줘!';return;}
-        eobj.dom=edom;
-      }
-      await db.ref(ROOT+'/routines/'+editId).update(eobj);
-      db.ref(ROOT+'/notifications').push({ts:Date.now(),p:me,name:nm,act:'edit'});
-      document.getElementById('addBg').classList.remove('show');
-      editId=null;
-      return;
-    }
     if(xType==='date'){
       var dk=document.getElementById('xDate').value;
       if(!dk){msg.textContent='날짜를 골라줘!';return;}
@@ -609,7 +322,7 @@ function renderRtList(){
   var h='';
   Object.keys(routines).forEach(function(id){
     var r=routines[id];
-    h+='<div class="rt-row" onclick="openAdd(null,\''+id+'\')" style="cursor:pointer"><div class="rt-info"><div class="rt-name">'+(r.emoji?r.emoji+' ':'')+r.name+'</div><div class="rt-meta">'+freqLabel(r)+' · '+(r.owner==='any'?'같이':MEMBERS[r.owner].name)+'</div></div>'+ownBdg(r.owner)+'<button class="rt-del" onclick="event.stopPropagation();delRoutine(\''+id+'\')">×</button></div>';
+    h+='<div class="rt-row"><div class="rt-info"><div class="rt-name">'+(r.emoji?r.emoji+' ':'')+r.name+'</div><div class="rt-meta">'+freqLabel(r)+' · '+(r.owner==='any'?'같이':MEMBERS[r.owner].name)+'</div></div>'+ownBdg(r.owner)+'<button class="rt-del" onclick="delRoutine(\''+id+'\')">×</button></div>';
   });
   document.getElementById('rtList').innerHTML=h||'<div class="empty-row">아직 반복 루틴이 없어요</div>';
 }
