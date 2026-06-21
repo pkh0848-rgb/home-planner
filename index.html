@@ -176,11 +176,11 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div id="listOverdue"></div>
   </div>
   <div class="sec" id="secWeekly">
-    <div class="sec-h"><span class="sec-title">🗓️ 이번주 안에</span><button class="sec-add" onclick="openAdd('week')">＋ 추가</button></div>
+    <div class="sec-h"><span class="sec-title" id="weeklyTitle">🗓️ 이번주 안에</span><button class="sec-add" onclick="openAdd('week')">＋ 추가</button></div>
     <div id="listWeekly"></div>
   </div>
   <div class="sec" id="secMonthly">
-    <div class="sec-h"><span class="sec-title">📅 이번달 안에</span><span class="sec-sub" id="monthLabel"></span></div>
+    <div class="sec-h"><span class="sec-title" id="monthlyTitle">📅 이번달 안에</span><span class="sec-sub" id="monthLabel"></span></div>
     <div id="listMonthly"></div>
   </div>
 </div>
@@ -287,17 +287,32 @@ function isScheduled(r,dateK){
 function isDated(r){return r.freq==='daily'||r.freq==='days'||r.freq==='monthday'||r.freq==='monthweek';}
 function doneEntry(dateK,id){var src=doneLog[dateK]||archDone[dateK];return src&&src[id]?src[id]:null;}
 function extrasAt(k){return extras[k]||archExtras[k]||{};}
-function weekDates(){
-  var d=new Date();d.setDate(d.getDate()-d.getDay());
+function weekDatesOf(k){
+  var d=parseK(k);d.setDate(d.getDate()-((d.getDay()+6)%7));
   var a=[];for(var i=0;i<7;i++){a.push(kStr(d));d.setDate(d.getDate()+1);}return a;
 }
+function weekDates(){return weekDatesOf(todayK());}
+function mdShort(k){var p=k.split('-');return (+p[1])+'/'+(+p[2]);}
 function findDoneInRange(id,keys){
   for(var i=0;i<keys.length;i++){if(doneEntry(keys[i],id))return keys[i];}
   return null;
 }
-function monthKeys(){
-  var pre=todayK().slice(0,7);
-  return Object.keys(doneLog).filter(function(k){return k.indexOf(pre)===0;});
+function monthKeysOf(pre){
+  var set={};
+  Object.keys(doneLog).forEach(function(k){if(k.indexOf(pre)===0)set[k]=1;});
+  Object.keys(archDone).forEach(function(k){if(k.indexOf(pre)===0)set[k]=1;});
+  return Object.keys(set);
+}
+function countWeeklyRemain(wk,includeTodos){
+  var n=0;
+  Object.keys(routines).forEach(function(id){if(routines[id].freq!=='weekly')return;if(!findDoneInRange(id,wk))n++;});
+  if(includeTodos)Object.keys(weekTodos).forEach(function(id){if(!findDoneInRange(id,wk))n++;});
+  return n;
+}
+function countMonthlyRemain(mks){
+  var n=0;
+  Object.keys(routines).forEach(function(id){if(routines[id].freq!=='monthly')return;if(!findDoneInRange(id,mks))n++;});
+  return n;
 }
 function ensureMonth(y,m,cb){
   var pre=y+'-'+pad(m+1);
@@ -331,9 +346,9 @@ function itemRow(opt){
 }
 /* ───── render ───── */
 function renderAll(){
-  var tk=todayK();var wk=weekDates();var today=new Date();
-  document.getElementById('monthLabel').textContent=(today.getMonth()+1)+'월 마지막 날까지';
-  /* overdue */
+  var tk=todayK();var wk=weekDates();
+  var vwk=weekDatesOf(selDayK);var vmonPre=selDayK.slice(0,7);
+  /* overdue (always based on today) */
   var ovH='',ovCnt=0;
   for(var i=7;i>=1;i--){
     var d=new Date();d.setDate(d.getDate()-i);var k=kStr(d);
@@ -352,7 +367,7 @@ function renderAll(){
   }
   document.getElementById('secOverdue').style.display=ovCnt?'':'none';
   document.getElementById('listOverdue').innerHTML=ovH;
-  /* today progress */
+  /* today progress (always based on today) */
   var tTotal=0,tDone=0;
   Object.keys(routines).forEach(function(id){
     var r=routines[id];if(!isDated(r)||!isScheduled(r,tk))return;
@@ -362,37 +377,47 @@ function renderAll(){
   Object.keys(tex).forEach(function(xid){tTotal++;if(doneEntry(tk,xid))tDone++;});
   document.getElementById('sumCount').textContent=tDone+'/'+tTotal;
   document.getElementById('pbarFill').style.width=(tTotal?Math.round(tDone/tTotal*100):0)+'%';
-  /* weekly section: weekly routines + weekTodos */
-  var wH='',wRemain=0,hasW=false;
+  /* weekly section: based on the SELECTED day's week */
+  var isCurWeek=(vwk[0]===wk[0]);
+  var vctk=(tk>=vwk[0]&&tk<=vwk[6])?tk:(vwk[6]<tk?vwk[6]:null);
+  var wH='',hasW=false;
   Object.keys(routines).forEach(function(id){
     var r=routines[id];if(r.freq!=='weekly')return;
     hasW=true;
-    var dk=findDoneInRange(id,wk);var de=dk?doneEntry(dk,id):null;
-    if(!de)wRemain++;
-    wH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매주 반복',action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')"});
+    var dk=findDoneInRange(id,vwk);var de=dk?doneEntry(dk,id):null;
+    wH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매주 반복',action:de?"toggle('"+dk+"','"+id+"')":(vctk?"toggle('"+vctk+"','"+id+"')":"alert('아직 안 온 주예요!')")});
   });
-  Object.keys(weekTodos).forEach(function(id){
-    hasW=true;
-    var t=weekTodos[id];
-    var dk=findDoneInRange(id,wk);var de=dk?doneEntry(dk,id):null;
-    if(!de)wRemain++;
-    wH+=itemRow({name:t.name,emoji:t.emoji||'🗓️',owner:t.owner||'any',de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'이번주만',action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')",del:de?null:"delWeekTodo('"+id+"')"});
-  });
-  document.getElementById('listWeekly').innerHTML=wH||'<div class="empty-row">이번주 안에 할 일이 없어요</div>';
-  /* monthly */
-  var mH='',mRemain=0,hasM=false;var mks=monthKeys();
+  if(isCurWeek){
+    Object.keys(weekTodos).forEach(function(id){
+      hasW=true;
+      var t=weekTodos[id];
+      var dk=findDoneInRange(id,vwk);var de=dk?doneEntry(dk,id):null;
+      wH+=itemRow({name:t.name,emoji:t.emoji||'🗓️',owner:t.owner||'any',de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'이번주만',action:de?"toggle('"+dk+"','"+id+"')":(vctk?"toggle('"+vctk+"','"+id+"')":"alert('아직 안 온 주예요!')"),del:de?null:"delWeekTodo('"+id+"')"});
+    });
+  }
+  document.getElementById('weeklyTitle').textContent=isCurWeek?'🗓️ 이번주 안에':'🗓️ '+mdShort(vwk[0])+'~'+mdShort(vwk[6])+' 안에';
+  document.getElementById('listWeekly').innerHTML=wH||'<div class="empty-row">'+(isCurWeek?'이번주':'이 주')+' 안에 할 일이 없어요</div>';
+  /* monthly section: based on the SELECTED day's month */
+  var isCurMonth=(vmonPre===tk.slice(0,7));
+  var vmks=monthKeysOf(vmonPre);
+  var mlast=vmonPre+'-'+pad(new Date(+vmonPre.slice(0,4),+vmonPre.slice(5,7),0).getDate());
+  var vcmk=isCurMonth?tk:(vmonPre<tk.slice(0,7)?mlast:null);
+  var mH='',hasM=false;
   Object.keys(routines).forEach(function(id){
     var r=routines[id];if(r.freq!=='monthly')return;
     hasM=true;
-    var dk=findDoneInRange(id,mks);var de=dk?doneEntry(dk,id):null;
-    if(!de)mRemain++;
-    mH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매달 반복',action:de?"toggle('"+dk+"','"+id+"')":"toggle('"+tk+"','"+id+"')"});
+    var dk=findDoneInRange(id,vmks);var de=dk?doneEntry(dk,id):null;
+    mH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매달 반복',action:de?"toggle('"+dk+"','"+id+"')":(vcmk?"toggle('"+vcmk+"','"+id+"')":"alert('아직 안 온 달이에요!')")});
   });
   document.getElementById('secMonthly').style.display=hasM?'':'none';
+  document.getElementById('monthlyTitle').textContent=isCurMonth?'📅 이번달 안에':'📅 '+(+vmonPre.slice(5,7))+'월 안에';
+  document.getElementById('monthLabel').textContent=(+vmonPre.slice(5,7))+'월 마지막 날까지';
   document.getElementById('listMonthly').innerHTML=mH;
-  /* badges */
+  /* badges (always based on current real week/month) */
   var bH='';
   bH+=ovCnt?'<span class="sbdg warn">⚠️ 밀린 일 '+ovCnt+'건</span>':'<span class="sbdg">밀린 일 없음 👍</span>';
+  var wRemain=countWeeklyRemain(wk,true);
+  var mRemain=countMonthlyRemain(monthKeysOf(tk.slice(0,7)));
   if(wRemain)bH+='<span class="sbdg">이번주 안에 '+wRemain+'건</span>';
   if(mRemain)bH+='<span class="sbdg">이번달 안에 '+mRemain+'건</span>';
   document.getElementById('sumBadges').innerHTML=bH;
@@ -404,9 +429,9 @@ function renderCal(){
   document.getElementById('calLabel').textContent=calY+'년 '+(calM+1)+'월';
   loadMemo();
   var tk=todayK();
-  var fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate();
+  var fd=(new Date(calY,calM,1).getDay()+6)%7,dim=new Date(calY,calM+1,0).getDate();
   var h='';
-  WD.forEach(function(w){h+='<div class="cal-wd">'+w+'</div>';});
+  ['월','화','수','목','금','토','일'].forEach(function(w){h+='<div class="cal-wd">'+w+'</div>';});
   for(var i=0;i<fd;i++)h+='<div></div>';
   for(var d=1;d<=dim;d++){
     var k=calY+'-'+pad(calM+1)+'-'+pad(d);
@@ -459,7 +484,7 @@ function saveMemo(){
   },500);
 }
 function selectDay(k){
-  selDayK=k;renderCal();renderDayPanel();
+  selDayK=k;renderAll();
   document.getElementById('dayPanelSec').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function renderDayPanel(){
