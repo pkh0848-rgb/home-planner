@@ -429,9 +429,9 @@ function renderCal(){
   document.getElementById('calLabel').textContent=calY+'년 '+(calM+1)+'월';
   loadMemo();
   var tk=todayK();
-  var fd=(new Date(calY,calM,1).getDay()+6)%7,dim=new Date(calY,calM+1,0).getDate();
+  var fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate();
   var h='';
-  ['월','화','수','목','금','토','일'].forEach(function(w){h+='<div class="cal-wd">'+w+'</div>';});
+  WD.forEach(function(w){h+='<div class="cal-wd">'+w+'</div>';});
   for(var i=0;i<fd;i++)h+='<div></div>';
   for(var d=1;d<=dim;d++){
     var k=calY+'-'+pad(calM+1)+'-'+pad(d);
