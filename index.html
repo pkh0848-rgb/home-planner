@@ -181,7 +181,7 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div id="listWeekly"></div>
   </div>
   <div class="sec" id="secMonthly">
-    <div class="sec-h"><span class="sec-title" id="monthlyTitle">📅 이번달 안에</span><span class="sec-sub" id="monthLabel"></span></div>
+    <div class="sec-h"><span class="sec-title" id="monthlyTitle">📅 이번달 안에</span><span class="sec-sub" id="monthLabel" style="display:none"></span><button class="sec-add" onclick="openAdd('month')">＋ 추가</button></div>
     <div id="listMonthly"></div>
   </div>
 </div>
@@ -209,6 +209,7 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div class="seg" id="typeSeg" style="margin-top:6px">
       <button data-t="date" id="tsDate" class="on">특정 날짜 (한 번)</button>
       <button data-t="week" id="tsWeek">이번주 안에 (한 번)</button>
+      <button data-t="month" id="tsMonth">이번달 안에 (한 번)</button>
       <button data-t="days">매주 특정 요일</button>
       <button data-t="monthday">매달 같은 날짜</button>
       <button data-t="monthweek">매달 N째주 요일</button>
@@ -252,7 +253,7 @@ function mkAva(p,sz){return '<svg viewBox="0 0 80 80" style="width:'+sz+'px;heig
 function josa(n,a,b){var c=n.charCodeAt(n.length-1);if(c<0xAC00||c>0xD7A3)return a;return (c-0xAC00)%28>0?a:b;}
 let me=localStorage.getItem('hp_who');
 if(me&&!MEMBERS[me])me=null;
-let routines={},doneLog={},extras={},weekTodos={},loaded=0;
+let routines={},doneLog={},extras={},weekTodos={},monthTodos={},loaded=0;
 let archDone={},archExtras={},listenStartK='0000-00-00';
 let selDayK=todayK();
 let calY=new Date().getFullYear(),calM=new Date().getMonth();
@@ -313,6 +314,7 @@ function countWeeklyRemain(wk,includeTodos){
 function countMonthlyRemain(mks){
   var n=0;
   Object.keys(routines).forEach(function(id){if(routines[id].freq!=='monthly')return;if(!findDoneInRange(id,mks))n++;});
+  Object.keys(monthTodos).forEach(function(id){if(!findDoneInRange(id,mks))n++;});
   return n;
 }
 function ensureMonth(y,m,cb){
@@ -410,7 +412,15 @@ function renderAll(){
     var dk=findDoneInRange(id,vmks);var de=dk?doneEntry(dk,id):null;
     mH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'매달 반복',action:de?"toggle('"+dk+"','"+id+"')":(vcmk?"toggle('"+vcmk+"','"+id+"')":"alert('아직 안 온 달이에요!')")});
   });
-  document.getElementById('secMonthly').style.display=hasM?'':'none';
+  if(isCurMonth){
+    Object.keys(monthTodos).forEach(function(id){
+      hasM=true;
+      var t=monthTodos[id];
+      var dk=findDoneInRange(id,vmks);var de=dk?doneEntry(dk,id):null;
+      mH+=itemRow({name:t.name,emoji:t.emoji||'📅',owner:t.owner||'any',de:de,meta:de?dk.slice(5).replace('-','/')+' 완료':'이번달만',action:de?"toggle('"+dk+"','"+id+"')":(vcmk?"toggle('"+vcmk+"','"+id+"')":"alert('아직 안 온 달이에요!')"),del:de?null:"delMonthTodo('"+id+"')"});
+    });
+  }
+  document.getElementById('secMonthly').style.display=(hasM||isCurMonth)?'':'none';
   document.getElementById('monthlyTitle').textContent=isCurMonth?'📅 이번달 안에':'📅 '+(+vmonPre.slice(5,7))+'월 안에';
   document.getElementById('monthLabel').textContent=(+vmonPre.slice(5,7))+'월 마지막 날까지';
   document.getElementById('listMonthly').innerHTML=mH;
@@ -533,6 +543,13 @@ async function delWeekTodo(id){
   await db.ref(ROOT+'/weekTodos/'+wk[0]+'/'+id).remove();
   for(var i=0;i<wk.length;i++){if(doneEntry(wk[i],id))await db.ref(ROOT+'/done/'+wk[i]+'/'+id).remove();}
 }
+async function delMonthTodo(id){
+  if(!confirm('이 할 일을 삭제할까?'))return;
+  var mk=todayK().slice(0,7);
+  await db.ref(ROOT+'/monthTodos/'+mk+'/'+id).remove();
+  var mks=monthKeysOf(mk);
+  for(var i=0;i<mks.length;i++){if(doneEntry(mks[i],id))await db.ref(ROOT+'/done/'+mks[i]+'/'+id).remove();}
+}
 /* ───── unified add ───── */
 var xType='date',xDays=[],xNths=[],xOwn='any',editId=null;
 function openAdd(preset,id){
@@ -542,6 +559,7 @@ function openAdd(preset,id){
   var routineMode=!!(editId||preset==='routine');
   document.getElementById('tsDate').style.display=routineMode?'none':'';
   document.getElementById('tsWeek').style.display=routineMode?'none':'';
+  document.getElementById('tsMonth').style.display=routineMode?'none':'';
   if(editId){
     var r=routines[editId]||{};
     xType=r.freq||'days';
@@ -555,7 +573,7 @@ function openAdd(preset,id){
     document.getElementById('addTitle').textContent='✏️ 집안일 수정';
     document.getElementById('addOkBtn').textContent='수정하기';
   }else{
-    xType=preset==='week'?'week':(preset==='routine'?'days':'date');
+    xType=preset==='week'?'week':(preset==='month'?'month':(preset==='routine'?'days':'date'));
     xOwn='any';xDays=[];
     document.getElementById('xName').value='';
     document.getElementById('xEmoji').value='';
@@ -588,7 +606,7 @@ async function addUnified(){
   if(!nm){msg.textContent='이름을 입력해줘!';return;}
   try{
     if(editId){
-      if(xType==='date'||xType==='week'){msg.textContent='반복 종류를 골라줘!';return;}
+      if(xType==='date'||xType==='week'||xType==='month'){msg.textContent='반복 종류를 골라줘!';return;}
       var eobj={name:nm,emoji:em||'🧹',freq:xType,owner:xOwn,days:null,dom:null,nth:null,nths:null,wd:null};
       if(xType==='days'){
         if(!xDays.length){msg.textContent='요일을 하나 이상 골라줘!';return;}
@@ -619,6 +637,10 @@ async function addUnified(){
       if(dk.slice(0,7)!==(calY+'-'+pad(calM+1))){calY=+dk.slice(0,4);calM=+dk.slice(5,7)-1;ensureMonth(calY,calM,renderCal);}
     }else if(xType==='week'){
       await db.ref(ROOT+'/weekTodos/'+weekDates()[0]).push({name:nm,owner:xOwn,emoji:em||null});
+      ensureWeekListener();
+    }else if(xType==='month'){
+      await db.ref(ROOT+'/monthTodos/'+todayK().slice(0,7)).push({name:nm,owner:xOwn,emoji:em||null});
+      ensureMonthListener();
     }else{
       var obj={name:nm,emoji:em||'🧹',freq:xType,owner:xOwn,createdK:todayK()};
       if(xType==='days'){
@@ -754,12 +776,29 @@ document.addEventListener('click',function(e){
 });
 /* ───── listeners & seed ───── */
 function checkLoaded(){loaded++;if(loaded>=3)document.getElementById('ov').style.display='none';}
+var _weekRef=null,_weekKey=null;
+function ensureWeekListener(){
+  var k=weekDates()[0];
+  if(_weekKey===k&&_weekRef)return;
+  if(_weekRef)_weekRef.off();
+  _weekKey=k;_weekRef=db.ref(ROOT+'/weekTodos/'+k);
+  _weekRef.on('value',function(s){weekTodos=s.val()||{};renderAll();});
+}
+var _monRef=null,_monKey=null;
+function ensureMonthListener(){
+  var k=todayK().slice(0,7);
+  if(_monKey===k&&_monRef)return;
+  if(_monRef)_monRef.off();
+  _monKey=k;_monRef=db.ref(ROOT+'/monthTodos/'+k);
+  _monRef.on('value',function(s){monthTodos=s.val()||{};renderAll();});
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden){ensureWeekListener();ensureMonthListener();}});
 db.ref(ROOT+'/routines').on('value',function(s){routines=s.val()||{};renderAll();checkLoaded();});
 (function(){
   var start=new Date();start.setDate(start.getDate()-40);var sk=kStr(start);listenStartK=sk;
   db.ref(ROOT+'/done').orderByKey().startAt(sk).on('value',function(s){doneLog={};s.forEach(function(c){doneLog[c.key]=c.val();});renderAll();checkLoaded();});
   db.ref(ROOT+'/extras').orderByKey().startAt(sk).on('value',function(s){extras={};s.forEach(function(c){extras[c.key]=c.val();});renderAll();checkLoaded();});
-  db.ref(ROOT+'/weekTodos/'+weekDates()[0]).on('value',function(s){weekTodos=s.val()||{};renderAll();});
+  ensureWeekListener();ensureMonthListener();
 })();
 db.ref(ROOT+'/seeded').once('value',function(s){
   if(s.val())return;
