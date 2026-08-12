@@ -78,6 +78,21 @@
 :root{--bg:#f4faf7;--card:#fff;--text:#1f2937;--muted:#9ca3af;--border:#e5e7eb;--r:16px;--sh:0 4px 20px rgba(0,0,0,.07)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Pretendard',"Segoe UI","Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+#gate{position:fixed;inset:0;background:var(--bg);z-index:5000;display:none;align-items:center;justify-content:center;padding:24px}
+#gate.show{display:flex}
+.gate-card{width:100%;max-width:380px;text-align:center;background:#fff;border-radius:24px;padding:34px 24px 28px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.gate-logo{font-size:46px;line-height:1}
+.gate-title{font-size:22px;font-weight:800;margin:10px 0 6px;letter-spacing:-.5px}
+.gate-sub{color:var(--muted);font-size:14px;margin:0 0 22px;line-height:1.6}
+.gate-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;width:100%;background:#fff;
+  border:1px solid var(--border);border-radius:14px;padding:13px 18px;font-size:15px;font-weight:700;cursor:pointer;color:var(--text)}
+.gate-btn:active{transform:scale(.98)}
+.gate-btn.primary{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff;border:none;margin-top:10px}
+.gate-input{width:100%;border:1px solid var(--border);border-radius:14px;padding:13px;text-align:center;
+  font-size:26px;font-weight:800;letter-spacing:8px;outline:none}
+.gate-input:focus{border-color:#10b981}
+.gate-link{background:none;border:none;color:var(--muted);font-size:13px;margin-top:14px;cursor:pointer;text-decoration:underline}
+.gate-msg{font-size:13px;color:#dc2626;margin:14px 0 0;min-height:18px}
 header{background:linear-gradient(135deg,#10b981,#0d9488);color:#fff;padding:18px 24px 14px;text-align:center;position:relative}
 .logo-title{font-family:'Pacifico',cursive;font-size:1.9rem;font-weight:400;letter-spacing:1px}
 header p{font-size:.82rem;opacity:.9;margin-top:3px}
@@ -208,6 +223,32 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 </style></head>
 <body>
 <div id="ov"><div class="sp"></div><span>연결 중…</span></div>
+
+<!-- 로그인 / 참여 게이트 -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">🏠</div>
+    <h1 class="gate-title">우리집 플래너</h1>
+    <p class="gate-sub" id="gateSub">우리집 집안일을 함께 나눠 맡아요</p>
+    <div id="gateLogin">
+      <button class="gate-btn" id="gLoginBtn">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2.5 24 .5 14.6.5 6.5 5.8 2.6 13.6l7.8 6c1.9-5.7 7.2-10.1 13.6-10.1z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.3z"/><path fill="#FBBC05" d="M10.4 28.4c-.5-1.4-.8-2.9-.8-4.4s.3-3 .8-4.4l-7.8-6C1 16.7 0 20.2 0 24s1 7.3 2.6 10.4l7.8-6z"/><path fill="#34A853" d="M24 47.5c6.2 0 11.5-2 15.4-5.6l-7.5-5.8c-2.1 1.4-4.8 2.2-7.9 2.2-6.4 0-11.7-4.3-13.6-10.1l-7.8 6C6.5 42.2 14.6 47.5 24 47.5z"/></svg>
+        Google로 시작하기
+      </button>
+    </div>
+    <div id="gateCode" style="display:none">
+      <p class="gate-sub" style="margin-bottom:12px">이미 쓰고 있는 사람에게 <b>초대 코드</b>를 받아 입력해 주세요</p>
+      <input id="gateCodeInput" class="gate-input" inputmode="numeric" maxlength="6" placeholder="000000"/>
+      <button class="gate-btn primary" id="gJoinBtn">참여하기</button>
+      <button class="gate-link" id="gLogoutBtn">다른 계정으로 로그인</button>
+    </div>
+    <div id="gatePersona" style="display:none">
+      <p class="gate-sub" style="margin-bottom:12px">우리집에서 <b>누구</b>신가요?</p>
+      <div class="who-btns" id="gatePersonaBtns"></div>
+    </div>
+    <p class="gate-msg" id="gateMsg"></p>
+  </div>
+</div>
 <header>
   <button class="who-chip" id="whoChip" onclick="openWho()"><span class="who-ava" id="whoAva">👤</span><span id="whoName">누구?</span></button>
   <h1 class="logo-title">homeLog</h1>
@@ -311,9 +352,56 @@ const ROOT='chorePlanner';
    화면에 보이는 변화는 없다. 예전에는 DB가 아무나 읽고 쓸 수 있게 열려 있었는데,
    규칙을 "로그인한 사용자만"으로 잠그기 위해 앱이 조용히 익명 계정으로 접속한다.
    데이터는 기기가 아니라 chorePlanner 경로에 있으므로 부부가 함께 보는 건 그대로다. */
-window.__AUTH_READY = firebase.auth().signInAnonymously()
-  .then(function(){ return true; })
-  .catch(function(e){ console.warn('익명 로그인 실패', e && e.code); return false; });
+/* ── 로그인 & 멤버 확인 ─────────────────────────────────────────
+   집안일 데이터는 chorePlanner 아래 그대로 두고, 그 방의 '멤버'인 사람만
+   읽고 쓸 수 있게 한다. 데이터를 옮기지 않으므로 기존 기록은 전부 그대로다. */
+var MYUID=null, MYMEMBER=null, APP_STARTED=false;
+function gateEl(id){ return document.getElementById(id); }
+function gateShow(which,msg){
+  gateEl('gate').classList.add('show');
+  ['gateLogin','gateCode','gatePersona'].forEach(function(k){ gateEl(k).style.display = (k===which?'':'none'); });
+  gateEl('gateMsg').textContent = msg||'';
+}
+function gateHide(){ gateEl('gate').classList.remove('show'); }
+function newCode(){ var s='';for(var i=0;i<6;i++)s+='0123456789'[Math.floor(Math.random()*10)];return s; }
+
+firebase.auth().onAuthStateChanged(function(u){
+  if(!u){ MYUID=null; gateShow('gateLogin'); return; }
+  MYUID=u.uid;
+  db.ref(ROOT+'/members/'+MYUID).once('value').then(function(s){
+    var m=s.val();
+    if(m && m.persona){ MYMEMBER=m; me=m.persona; try{localStorage.setItem('hp_who',me);}catch(e){}; gateHide(); startApp(); }
+    else { gateShow('gatePersona'); renderPersonaPick(null); }
+  }).catch(function(){ gateShow('gateLogin','접속에 문제가 생겼어요. 다시 시도해 주세요'); });
+});
+
+function renderPersonaPick(code){
+  var box=gateEl('gatePersonaBtns'); box.innerHTML='';
+  MK.forEach(function(pk){
+    var m=MEMBERS[pk];
+    var b=document.createElement('button'); b.className='who-btn';
+    b.innerHTML='<div style="width:54px;height:54px;margin:0 auto">'+mkAva(pk,54)+'</div><div class="nm" style="color:'+m.dark+'">'+m.name+'</div>';
+    b.onclick=function(){ claimMember(pk, code); };
+    box.appendChild(b);
+  });
+}
+/* 첫 사용자는 코드 없이 시작(방을 여는 사람), 그 뒤로는 초대 코드가 있어야 들어온다 */
+function claimMember(persona, code){
+  var u=firebase.auth().currentUser; if(!u) return;
+  var rec={persona:persona, name:MEMBERS[persona].name, email:u.email||null, joinedAt:Date.now()};
+  if(code) rec.code=code;
+  db.ref(ROOT+'/members/'+MYUID).set(rec).then(function(){
+    if(!code){ // 첫 사용자 → 초대 코드 생성
+      db.ref(ROOT+'/meta/code').once('value').then(function(cs){
+        if(!cs.val()) db.ref(ROOT+'/meta/code').set(newCode());
+      }).catch(function(){});
+    }
+    MYMEMBER=rec; me=persona; try{localStorage.setItem('hp_who',me);}catch(e){}
+    gateHide(); startApp();
+  }).catch(function(){
+    gateShow('gateCode','이미 사용 중인 집이에요. 초대 코드를 입력해 주세요');
+  });
+}
 const MEMBERS={
   kh:{name:'관형',color:'#6366f1',light:'#eef2ff',dark:'#4338ca',
     svg:'<ellipse cx="21" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(-12,21,36)"/><ellipse cx="59" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(12,59,36)"/><ellipse cx="40" cy="46" rx="22" ry="20" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><ellipse cx="40" cy="53" rx="12" ry="9" fill="#fde68a"/><circle cx="32" cy="41" r="5" fill="#fff"/><circle cx="48" cy="41" r="5" fill="#fff"/><circle cx="33" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="49" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="34" cy="41" r="1.2" fill="#fff"/><circle cx="50" cy="41" r="1.2" fill="#fff"/><ellipse cx="40" cy="50" rx="4" ry="3" fill="#92400e"/><path d="M36 54 Q40 58 44 54" stroke="#78350f" stroke-width="1.5" fill="none" stroke-linecap="round"/>'},
@@ -870,13 +958,18 @@ function ensureMonthListener(){
   _monRef.on('value',function(s){monthTodos=s.val()||{};renderAll();});
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden){ensureWeekListener();ensureMonthListener();}});
-db.ref(ROOT+'/routines').on('value',function(s){routines=s.val()||{};renderAll();checkLoaded();});
-(function(){
+/* 로그인·멤버 확인이 끝난 뒤에만 데이터를 붙인다 */
+function startApp(){
+  if(APP_STARTED) return; APP_STARTED=true;
+  db.ref(ROOT+'/routines').on('value',function(s){routines=s.val()||{};renderAll();checkLoaded();});
   var start=new Date();start.setDate(start.getDate()-40);var sk=kStr(start);listenStartK=sk;
   db.ref(ROOT+'/done').orderByKey().startAt(sk).on('value',function(s){doneLog={};s.forEach(function(c){doneLog[c.key]=c.val();});renderAll();checkLoaded();});
   db.ref(ROOT+'/extras').orderByKey().startAt(sk).on('value',function(s){extras={};s.forEach(function(c){extras[c.key]=c.val();});renderAll();checkLoaded();});
   ensureWeekListener();ensureMonthListener();
-})();
+  seedIfEmpty();
+  registerPush(); updatePushBtn(); renderWho();
+}
+function seedIfEmpty(){
 db.ref(ROOT+'/seeded').once('value',function(s){
   if(s.val())return;
   db.ref(ROOT+'/seeded').set(true);
@@ -891,6 +984,7 @@ db.ref(ROOT+'/seeded').once('value',function(s){
   ];
   defaults.forEach(function(r){db.ref(ROOT+'/routines').push(r);});
 });
+}
 /* ───── 푸시 알림 ───── */
 const VAPID_PUBLIC='BPLF0T4mL9Z9wk6_KOcBVl2qPIUCLOk074gGcvuttLriD8wppSz9Zx8qVGv0nt9xsjXWrHNJhFR7CU2opMXvXHc';
 function urlB64ToU8(b64){
@@ -937,11 +1031,27 @@ async function enablePush(){
     alert('알림 설정 실패: '+(e&&e.message||e));
   }
 }
-registerPush();
-updatePushBtn();
 initAddForm();
-renderWho();
-if(!me)setTimeout(openWho,600);
+/* 게이트 버튼 배선 */
+document.getElementById('gLoginBtn').onclick=function(){
+  var pr=new firebase.auth.GoogleAuthProvider();
+  gateEl('gateMsg').textContent='로그인 창을 여는 중…';
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){})
+    .then(function(){ return firebase.auth().signInWithPopup(pr); })
+    .then(function(){ gateEl('gateMsg').textContent=''; })
+    .catch(function(e){
+      var c=(e&&e.code)||'';
+      if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'){ gateEl('gateMsg').textContent=''; return; }
+      if(c==='auth/popup-blocked'){ return firebase.auth().signInWithRedirect(pr); }
+      gateEl('gateMsg').textContent='로그인 실패: '+c;
+    });
+};
+document.getElementById('gJoinBtn').onclick=function(){
+  var c=(document.getElementById('gateCodeInput').value||'').trim();
+  if(!/^\d{6}$/.test(c)){ gateEl('gateMsg').textContent='6자리 숫자 코드를 입력해 주세요'; return; }
+  gateShow('gatePersona'); renderPersonaPick(c);
+};
+document.getElementById('gLogoutBtn').onclick=function(){ firebase.auth().signOut(); };
 setInterval(function(){renderAll();renderNotifs();},60000);
 </script>
 </body>
