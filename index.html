@@ -301,10 +301,19 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 </div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
 firebase.initializeApp({apiKey:"AIzaSyBjlWA9GHPvL4sGEdOShwyaCnPDuLgIcPA",authDomain:"studylog-cd02a.firebaseapp.com",databaseURL:"https://studylog-cd02a-default-rtdb.firebaseio.com",projectId:"studylog-cd02a",storageBucket:"studylog-cd02a.firebasestorage.app",messagingSenderId:"714212261002",appId:"1:714212261002:web:075c8c992ba986b5a9c173"});
 const db=firebase.database();
 const ROOT='chorePlanner';
+
+/* ── 익명 로그인 ────────────────────────────────────────────────
+   화면에 보이는 변화는 없다. 예전에는 DB가 아무나 읽고 쓸 수 있게 열려 있었는데,
+   규칙을 "로그인한 사용자만"으로 잠그기 위해 앱이 조용히 익명 계정으로 접속한다.
+   데이터는 기기가 아니라 chorePlanner 경로에 있으므로 부부가 함께 보는 건 그대로다. */
+window.__AUTH_READY = firebase.auth().signInAnonymously()
+  .then(function(){ return true; })
+  .catch(function(e){ console.warn('익명 로그인 실패', e && e.code); return false; });
 const MEMBERS={
   kh:{name:'관형',color:'#6366f1',light:'#eef2ff',dark:'#4338ca',
     svg:'<ellipse cx="21" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(-12,21,36)"/><ellipse cx="59" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(12,59,36)"/><ellipse cx="40" cy="46" rx="22" ry="20" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><ellipse cx="40" cy="53" rx="12" ry="9" fill="#fde68a"/><circle cx="32" cy="41" r="5" fill="#fff"/><circle cx="48" cy="41" r="5" fill="#fff"/><circle cx="33" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="49" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="34" cy="41" r="1.2" fill="#fff"/><circle cx="50" cy="41" r="1.2" fill="#fff"/><ellipse cx="40" cy="50" rx="4" ry="3" fill="#92400e"/><path d="M36 54 Q40 58 44 54" stroke="#78350f" stroke-width="1.5" fill="none" stroke-linecap="round"/>'},
