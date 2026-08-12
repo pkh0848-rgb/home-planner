@@ -1,5 +1,5 @@
 import wp from 'web-push';
-const DB='https://studylog-cd02a-default-rtdb.firebaseio.com', ROOT='chorePlanner', SITE='https://pkh0848-rgb.github.io/home-planner/';
+const DB='https://homelog-8b94f-default-rtdb.firebaseio.com', ROOT='chorePlanner', SITE='https://pkh0848-rgb.github.io/home-planner/';
 const PUB='BPLF0T4mL9Z9wk6_KOcBVl2qPIUCLOk074gGcvuttLriD8wppSz9Zx8qVGv0nt9xsjXWrHNJhFR7CU2opMXvXHc';
 const PRIV=process.env.VAPID_PRIVATE;
 if(!PRIV){console.error('no VAPID_PRIVATE');process.exit(1);}
