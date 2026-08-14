@@ -138,6 +138,11 @@ header p{font-size:.82rem;opacity:.9;margin-top:3px}
 .sec-title{font-weight:800;font-size:.92rem}
 .sec-sub{font-size:.7rem;color:var(--muted);font-weight:500}
 .sec.overdue{border:1.5px solid #fecaca;background:#fffbfb}
+.ov-bulk{display:flex;gap:7px;margin:2px 0 10px}
+.ov-btn{flex:1;border-radius:11px;padding:9px 8px;font-size:12.8px;font-weight:800;border:1px solid;cursor:pointer}
+.ov-btn.ok{background:#eafaf1;border-color:#bfe8d2;color:#1a7f52}
+.ov-btn.skip{background:#fff;border-color:#e8dfdf;color:#96837f}
+.ov-btn:active{transform:scale(.97)}
 .item{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid #f3f4f6}
 .item:last-child{border-bottom:none}
 .ckb{width:30px;height:30px;border-radius:50%;border:2.5px solid #d1d5db;background:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:transparent;font-size:.95rem;transition:all .15s;font-family:inherit}
@@ -305,7 +310,9 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div id="listDay"></div>
   </div>
   <div class="sec overdue" id="secOverdue" style="display:none">
-    <div class="sec-h"><span class="sec-title">⚠️ 밀린 일</span><span class="sec-sub">지난 7일 중 놓친 일</span></div>
+    <div class="sec-h"><span class="sec-title">⚠️ 밀린 일</span><span class="sec-sub" id="ovSub">지난 7일 중 놓친 일</span></div>
+    <div class="ov-bulk"><button class="ov-btn ok" onclick="bulkOverdue('done')">✅ 전부 했어요</button>
+      <button class="ov-btn skip" onclick="bulkOverdue('skip')">🙈 전부 넘기기</button></div>
     <div id="listOverdue"></div>
   </div>
   <div class="sec" id="secWeekly">
@@ -379,6 +386,7 @@ const ROOT='chorePlanner';
    집안일 데이터는 chorePlanner 아래 그대로 두고, 그 방의 '멤버'인 사람만
    읽고 쓸 수 있게 한다. 데이터를 옮기지 않으므로 기존 기록은 전부 그대로다. */
 var MYUID=null, MYMEMBER=null, APP_STARTED=false;
+var OVERDUE=[];   /* 밀린 일 목록 — 일괄 처리용 */
 function gateEl(id){ return document.getElementById(id); }
 function gateShow(which,msg){
   gateEl('gate').classList.add('show');
@@ -389,8 +397,15 @@ function gateHide(){ gateEl('gate').classList.remove('show'); }
 function newCode(){ var s='';for(var i=0;i<6;i++)s+='0123456789'[Math.floor(Math.random()*10)];return s; }
 
 firebase.auth().onAuthStateChanged(function(u){
+  if(!u && window.__ourlogTrySSO){
+    window.__ourlogTrySSO().then(function(ok){
+      if(ok) return;
+      if(window.__hideAuthSplash) window.__hideAuthSplash();
+      MYUID=null; gateShow('gateLogin');
+    });
+    return;
+  }
   if(window.__hideAuthSplash) window.__hideAuthSplash();
-  if(!u){ MYUID=null; gateShow('gateLogin'); return; }
   /* 예전에 잠깐 쓰던 익명 세션이 남아 있으면 정리하고 구글 로그인을 요구한다.
      익명 계정은 기기·저장소에 묶여 있어 지워지면 다시 못 들어오기 때문. */
   if(u.isAnonymous){ firebase.auth().signOut(); MYUID=null; gateShow('gateLogin'); return; }
@@ -544,24 +559,27 @@ function renderAll(){
   var tk=todayK();var wk=weekDates();
   var vwk=weekDatesOf(selDayK);var vmonPre=selDayK.slice(0,7);
   /* overdue (always based on today) */
-  var ovH='',ovCnt=0;
+  var ovH='',ovCnt=0,ovList=[];
   for(var i=7;i>=1;i--){
     var d=new Date();d.setDate(d.getDate()-i);var k=kStr(d);
     Object.keys(routines).forEach(function(id){
       var r=routines[id];
       if(!isDated(r)||!isScheduled(r,k)||doneEntry(k,id))return;
-      ovCnt++;
+      ovCnt++; ovList.push({k:k,id:id,name:r.name,kind:'routine'});
       ovH+=itemRow({name:r.name,emoji:r.emoji,owner:r.owner,de:null,dateBdg:(d.getMonth()+1)+'/'+d.getDate()+' ('+WD[d.getDay()]+')',action:"toggle('"+k+"','"+id+"')"});
     });
     var ex=extrasAt(k);
     Object.keys(ex).forEach(function(xid){
       if(doneEntry(k,xid))return;
-      ovCnt++;
+      ovCnt++; ovList.push({k:k,id:xid,name:ex[xid].name,kind:'extra'});
       ovH+=itemRow({name:ex[xid].name,emoji:'📍',owner:ex[xid].owner||'any',de:null,dateBdg:(d.getMonth()+1)+'/'+d.getDate()+' ('+WD[d.getDay()]+')',action:"toggle('"+k+"','"+xid+"')",del:"delExtra('"+k+"','"+xid+"')"});
     });
   }
   document.getElementById('secOverdue').style.display=ovCnt?'':'none';
   document.getElementById('listOverdue').innerHTML=ovH;
+  OVERDUE=ovList;
+  var ovSub=document.getElementById('ovSub');
+  if(ovSub) ovSub.textContent='지난 7일 중 놓친 일 '+ovCnt+'건';
   /* today progress (always based on today) */
   var tTotal=0,tDone=0;
   Object.keys(routines).forEach(function(id){
@@ -642,14 +660,14 @@ function renderCal(){
     var dots=[],handled={};
     Object.keys(routines).forEach(function(id){
       var r=routines[id];var de=doneEntry(k,id);
-      if(de){handled[id]=1;dots.push('<span class="cd done"></span>');}
+      if(de){handled[id]=1;dots.push(de.skipped?'<span class="cd miss"></span>':'<span class="cd done"></span>');}
       else if(isDated(r)&&isScheduled(r,k)){handled[id]=1;dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');}
     });
     var ex=extrasAt(k);
     Object.keys(ex).forEach(function(xid){
       handled[xid]=1;
       var de=doneEntry(k,xid);
-      if(de)dots.push('<span class="cd done"></span>');
+      if(de)dots.push(de.skipped?'<span class="cd miss"></span>':'<span class="cd done"></span>');
       else dots.push(k<tk?'<span class="cd miss"></span>':'<span class="cd due"></span>');
     });
     var dl=Object.assign({},archDone[k]||{},doneLog[k]||{});
@@ -710,6 +728,33 @@ function renderDayPanel(){
   document.getElementById('listDay').innerHTML=h||'<div class="empty-row">이날 등록된 집안일이 없어요. ‘＋ 이날 추가’로 등록해봐요!</div>';
 }
 /* ───── actions ───── */
+/* 밀린 일 일괄 처리
+   '전부 했어요' = 실제로 한 걸로 기록에 남긴다.
+   '전부 넘기기' = 하지 않았지만 목록에서 치운다(skip 표시). 기록엔 완료로 잡히지 않는다. */
+async function bulkOverdue(mode){
+  if(!me){ openWho(); return; }
+  var list=(OVERDUE||[]).slice();
+  if(!list.length) return;
+  var msg = mode==='done'
+    ? '밀린 일 '+list.length+'건을 모두 완료로 표시할까?'
+    : '밀린 일 '+list.length+'건을 넘길까?\n(완료로 기록되지 않고 목록에서만 사라져)';
+  if(!confirm(msg)) return;
+  var ups={};
+  list.forEach(function(o){
+    ups[ROOT+'/done/'+o.k+'/'+o.id] = (mode==='done')
+      ? {by:me, ts:Date.now()}
+      : {by:me, ts:Date.now(), skipped:true};
+  });
+  try{
+    await db.ref().update(ups);
+    /* 지난 달 데이터가 캐시에 있으면 다시 읽어온다 */
+    var months={};
+    list.forEach(function(o){ months[o.k.slice(0,7)]=1; });
+    Object.keys(months).forEach(function(ym){ delete monthCache[ym]; });
+    renderAll();
+    ensureMonth(calY, calM, renderCal);
+  }catch(e){ alert('처리 실패: '+e.message); }
+}
 async function toggle(dateK,id){
   if(!me){openWho();return;}
   var cur=doneEntry(dateK,id);
@@ -1101,6 +1146,31 @@ setInterval(function(){renderAll();renderNotifs();},60000);
   }catch(e){}}
   if(document.readyState!=='loading') mount(); else document.addEventListener('DOMContentLoaded',mount);
   setInterval(mount,1500);
+})();
+</script>
+<!-- ===== ourLog: 런처에서 받은 로그인 이어받기 ===== -->
+<script>
+/* 런처(ourLog 첫 화면)에서 구글 로그인을 하면 ID 토큰이 잠깐 저장된다.
+   이 앱이 아직 로그인 전이면 그 토큰으로 조용히 로그인해서
+   앱마다 다시 로그인하는 번거로움을 없앤다. 실패해도 원래 로그인 화면이 그대로 뜬다. */
+(function(){
+  var KEY='ourlog_gidt', tried=false;
+  function token(){
+    try{ var v=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(v && v.exp>Date.now()) return v.t; }catch(e){}
+    return null;
+  }
+  window.__ourlogTrySSO=function(){
+    if(tried) return Promise.resolve(false);
+    tried=true;
+    var t=token(); if(!t) return Promise.resolve(false);
+    try{
+      var cred=firebase.auth.GoogleAuthProvider.credential(t);
+      return firebase.auth().signInWithCredential(cred)
+        .then(function(){ return true; })
+        .catch(function(e){ if(window.console) console.warn('SSO 실패', e && e.code); return false; });
+    }catch(e){ return Promise.resolve(false); }
+  };
 })();
 </script>
 </body>
