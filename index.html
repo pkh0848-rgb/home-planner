@@ -222,6 +222,29 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 .dom-inp{width:64px;padding:7px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:inherit;outline:none;text-align:center}
 </style></head>
 <body>
+<div id="authSplash"><div class="as-dot"></div></div>
+<style>
+#authSplash{position:fixed;inset:0;z-index:99999;background:#f4faf7;display:flex;align-items:center;
+  justify-content:center;transition:opacity .2s ease}
+#authSplash.gone{opacity:0;pointer-events:none}
+.as-dot{width:34px;height:34px;border-radius:50%;border:3px solid rgba(128,128,128,.22);
+  border-top-color:#22A06B;animation:asSpin .8s linear infinite}
+@keyframes asSpin{to{transform:rotate(360deg)}}
+</style>
+<script>
+/* 로그인 상태가 확정되기 전까지 로그인 화면이 잠깐 스쳐 보이는 걸 막는다.
+   Firebase가 저장소에서 세션을 복원하는 데 시간이 걸리기 때문. */
+(function(){
+  var done=false;
+  window.__hideAuthSplash=function(){
+    if(done) return; done=true;
+    var e=document.getElementById('authSplash'); if(!e) return;
+    e.classList.add('gone'); setTimeout(function(){ if(e.parentNode) e.parentNode.removeChild(e); },240);
+  };
+  setTimeout(window.__hideAuthSplash, 4000);   /* 인증이 응답 없을 때를 대비한 안전장치 */
+})();
+</script>
+
 <div id="ov"><div class="sp"></div><span>연결 중…</span></div>
 
 <!-- 로그인 / 참여 게이트 -->
@@ -366,6 +389,7 @@ function gateHide(){ gateEl('gate').classList.remove('show'); }
 function newCode(){ var s='';for(var i=0;i<6;i++)s+='0123456789'[Math.floor(Math.random()*10)];return s; }
 
 firebase.auth().onAuthStateChanged(function(u){
+  if(window.__hideAuthSplash) window.__hideAuthSplash();
   if(!u){ MYUID=null; gateShow('gateLogin'); return; }
   /* 예전에 잠깐 쓰던 익명 세션이 남아 있으면 정리하고 구글 로그인을 요구한다.
      익명 계정은 기기·저장소에 묶여 있어 지워지면 다시 못 들어오기 때문. */
