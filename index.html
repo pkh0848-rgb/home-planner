@@ -1029,7 +1029,7 @@ function openAdd(preset,id){
   document.querySelectorAll('#typeSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.t===xType);});
   document.querySelectorAll('#optDays button').forEach(function(b,i){b.classList.toggle('on',xDays.indexOf(i)>=0);});
   document.querySelectorAll('#nthPick button').forEach(function(b,i){b.classList.toggle('on',xNths.indexOf(i+1)>=0);});
-  document.querySelectorAll('#xOwnSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.o===xOwn);});
+  renderOwnerSeg();
   syncAddOpts();
   document.getElementById('addBg').classList.add('show');
   document.getElementById('xName').focus();
@@ -1105,6 +1105,24 @@ async function addUnified(){
     document.getElementById('addBg').classList.remove('show');
   }catch(e){msg.textContent='저장 실패: '+e.message;}
 }
+/* 담당 고르기 — 집 사람이 바뀔 수 있으니 창을 열 때마다 다시 그린다 */
+function renderOwnerSeg(){
+  var seg=document.getElementById('xOwnSeg'); if(!seg) return;
+  seg.innerHTML='';
+  var opts=[{o:'any',t:'같이 / 아무나'}].concat(MK.map(function(k){
+    return {o:k, t:(MEMBERS[k].avatar||'')+' '+MEMBERS[k].name};
+  }));
+  opts.forEach(function(op){
+    var b=document.createElement('button'); b.dataset.o=op.o; b.textContent=op.t;
+    if(op.o===xOwn) b.className='on';
+    b.onclick=function(){
+      xOwn=op.o;
+      seg.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    };
+    seg.appendChild(b);
+  });
+}
 function initAddForm(){
   document.querySelectorAll('#typeSeg button').forEach(function(b){
     b.onclick=function(){xType=b.dataset.t;document.querySelectorAll('#typeSeg button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');syncAddOpts();};
@@ -1127,19 +1145,7 @@ function initAddForm(){
     b.onclick=function(){var ix=xNths.indexOf(n);if(ix>=0){xNths.splice(ix,1);b.classList.remove('on');}else{xNths.push(n);b.classList.add('on');}};
     np.appendChild(b);
   });
-  /* 담당은 집 사람 수에 맞춰 만든다 */
-  var seg=document.getElementById('xOwnSeg'); seg.innerHTML='';
-  var opts=[{o:'any',t:'같이 / 아무나'}].concat(MK.map(function(k){ return {o:k, t:(MEMBERS[k].avatar||'')+' '+MEMBERS[k].name}; }));
-  opts.forEach(function(op){
-    var b=document.createElement('button'); b.dataset.o=op.o; b.textContent=op.t;
-    if(op.o===xOwn) b.className='on';
-    b.onclick=function(){
-      xOwn=op.o;
-      seg.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
-      b.classList.add('on');
-    };
-    seg.appendChild(b);
-  });
+  renderOwnerSeg();
 }
 /* ───── manage list ───── */
 function openManage(){renderRtList();document.getElementById('manageBg').classList.add('show');}
@@ -1214,8 +1220,10 @@ function renderHouseSettings(){
         renderWho(); renderAll(); say('바꿨어요');
       }).catch(function(){ say('저장하지 못했어요'); });
     };
-    inp.onblur=save;
-    inp.onkeydown=function(e){ if(e.key==='Enter'){ inp.blur(); } };
+    var t=null;
+    inp.oninput=function(){ clearTimeout(t); t=setTimeout(save,700); };
+    inp.onblur=function(){ clearTimeout(t); save(); };
+    inp.onkeydown=function(e){ if(e.key==='Enter'){ clearTimeout(t); save(); inp.blur(); } };
 
     row.appendChild(av); row.appendChild(inp);
     if(k===me){ var tag=document.createElement('span'); tag.className='seat-me'; tag.textContent='나'; row.appendChild(tag); }
