@@ -138,6 +138,17 @@ header p{font-size:.82rem;opacity:.9;margin-top:3px}
 .sec-title{font-weight:800;font-size:.92rem}
 .sec-sub{font-size:.7rem;color:var(--muted);font-weight:500}
 .sec.overdue{border:1.5px solid #fecaca;background:#fffbfb}
+.inv-sec{margin-top:20px;padding-top:16px;border-top:1px solid #e8efe9}
+.inv-h{font-size:13.5px;font-weight:800;margin-bottom:3px}
+.inv-sub{font-size:12px;color:#7b8a83;margin:0 0 10px}
+.inv-code{font-size:26px;font-weight:800;letter-spacing:7px;text-align:center;
+  background:#f2f9f5;border:1px dashed #b9dfc9;border-radius:12px;padding:12px 8px;color:#1a7f52}
+.inv-btns{display:flex;gap:7px;margin-top:9px}
+.inv-b{flex:1;border-radius:11px;padding:10px 8px;font-size:13px;font-weight:800;
+  border:1px solid #dfe8e2;background:#fff;color:#3b4a44;cursor:pointer}
+.inv-b.primary{background:#22a06b;border-color:#22a06b;color:#fff}
+.inv-b:active{transform:scale(.97)}
+.inv-msg{font-size:12px;color:#22a06b;text-align:center;margin:8px 0 0;min-height:16px}
 .ov-bulk{display:flex;gap:7px;margin:2px 0 10px}
 .ov-btn{flex:1;border-radius:11px;padding:9px 8px;font-size:12.8px;font-weight:800;border:1px solid;cursor:pointer}
 .ov-btn.ok{background:#eafaf1;border-color:#bfe8d2;color:#1a7f52}
@@ -264,11 +275,25 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
         Google로 시작하기
       </button>
     </div>
+    <div id="gateStart" style="display:none">
+      <p class="gate-sub" style="margin-bottom:14px">우리집을 새로 만들거나, 가족이 알려준 코드로 참여하세요</p>
+      <button class="gate-btn primary" id="gNewBtn">🏠 우리집 새로 만들기</button>
+      <button class="gate-btn" id="gHaveCodeBtn" style="margin-top:9px">초대 코드가 있어요</button>
+      <button class="gate-link" id="gLogoutBtn2">다른 계정으로 로그인</button>
+    </div>
     <div id="gateCode" style="display:none">
-      <p class="gate-sub" style="margin-bottom:12px">이미 쓰고 있는 사람에게 <b>초대 코드</b>를 받아 입력해 주세요</p>
+      <p class="gate-sub" style="margin-bottom:12px">이미 쓰고 있는 가족에게 <b>초대 코드</b>를 받아 입력해 주세요</p>
       <input id="gateCodeInput" class="gate-input" inputmode="numeric" maxlength="6" placeholder="000000"/>
       <button class="gate-btn primary" id="gJoinBtn">참여하기</button>
+      <button class="gate-link" id="gBackBtn">← 뒤로</button>
       <button class="gate-link" id="gLogoutBtn">다른 계정으로 로그인</button>
+    </div>
+    <div id="gateNew" style="display:none">
+      <p class="gate-sub" style="margin-bottom:12px">두 사람의 이름을 적어주세요<br/><span style="font-size:12px">나중에 설정에서 바꿀 수 있어요</span></p>
+      <input id="newN1" class="gate-input" maxlength="8" placeholder="첫 번째 사람 (예: 관형)"/>
+      <input id="newN2" class="gate-input" maxlength="8" placeholder="두 번째 사람 (예: 주니)" style="margin-top:8px"/>
+      <button class="gate-btn primary" id="gCreateBtn" style="margin-top:10px">만들기</button>
+      <button class="gate-link" id="gBackBtn2">← 뒤로</button>
     </div>
     <div id="gatePersona" style="display:none">
       <p class="gate-sub" style="margin-bottom:12px">우리집에서 <b>누구</b>신가요?</p>
@@ -324,11 +349,22 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div id="listMonthly"></div>
   </div>
 </div>
-<div class="modal-bg" id="whoBg">
+<div class="modal-bg" id="whoBg" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <h3>👋 누구세요?</h3>
     <p class="modal-sub">이 기기에서 체크하면 이 이름으로 기록돼요</p>
     <div class="who-btns" id="whoBtns"></div>
+
+    <div class="inv-sec">
+      <div class="inv-h">🔑 가족 초대하기</div>
+      <p class="inv-sub">이 코드를 알려주면 같은 집으로 들어올 수 있어요</p>
+      <div class="inv-code" id="invCode">------</div>
+      <div class="inv-btns">
+        <button class="inv-b" id="invCopy">코드 복사</button>
+        <button class="inv-b primary" id="invShare">📤 공유하기</button>
+      </div>
+      <p class="inv-msg" id="invMsg"></p>
+    </div>
   </div>
 </div>
 <div class="modal-bg" id="manageBg" onclick="if(event.target===this)this.classList.remove('show')">
@@ -376,7 +412,9 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
 <script>
 firebase.initializeApp({apiKey:"AIzaSyBZJ1juV2C2dTiLAUcAM25n98lmtlKU6Pg",authDomain:"homelog-8b94f.firebaseapp.com",databaseURL:"https://homelog-8b94f-default-rtdb.firebaseio.com",projectId:"homelog-8b94f",storageBucket:"homelog-8b94f.firebasestorage.app",messagingSenderId:"529137751350",appId:"1:529137751350:web:dee9bb8156f443a2758f97"});
 const db=firebase.database();
-const ROOT='chorePlanner';
+var HOUSE=null;                       /* 내가 속한 집 id */
+function ROOT_(){ return 'houses/'+HOUSE; }
+Object.defineProperty(window,'ROOT',{get:function(){ return ROOT_(); }});
 
 /* ── 익명 로그인 ────────────────────────────────────────────────
    화면에 보이는 변화는 없다. 예전에는 DB가 아무나 읽고 쓸 수 있게 열려 있었는데,
@@ -390,7 +428,8 @@ var OVERDUE=[];   /* 밀린 일 목록 — 일괄 처리용 */
 function gateEl(id){ return document.getElementById(id); }
 function gateShow(which,msg){
   gateEl('gate').classList.add('show');
-  ['gateLogin','gateCode','gatePersona'].forEach(function(k){ gateEl(k).style.display = (k===which?'':'none'); });
+  ['gateLogin','gateStart','gateCode','gateNew','gatePersona'].forEach(function(k){
+    var e=gateEl(k); if(e) e.style.display = (k===which?'':'none'); });
   gateEl('gateMsg').textContent = msg||'';
 }
 function gateHide(){ gateEl('gate').classList.remove('show'); }
@@ -406,16 +445,88 @@ firebase.auth().onAuthStateChanged(function(u){
     return;
   }
   if(window.__hideAuthSplash) window.__hideAuthSplash();
-  /* 예전에 잠깐 쓰던 익명 세션이 남아 있으면 정리하고 구글 로그인을 요구한다.
-     익명 계정은 기기·저장소에 묶여 있어 지워지면 다시 못 들어오기 때문. */
+  /* 예전에 잠깐 쓰던 익명 세션이 남아 있으면 정리하고 구글 로그인을 요구한다. */
   if(u.isAnonymous){ firebase.auth().signOut(); MYUID=null; gateShow('gateLogin'); return; }
   MYUID=u.uid;
-  db.ref(ROOT+'/members/'+MYUID).once('value').then(function(s){
-    var m=s.val();
-    if(m && m.persona){ MYMEMBER=m; me=m.persona; try{localStorage.setItem('hp_who',me);}catch(e){}; gateHide(); startApp(); }
-    else { gateShow('gatePersona'); renderPersonaPick(null); }
-  }).catch(function(){ gateShow('gateLogin','접속에 문제가 생겼어요. 다시 시도해 주세요'); });
+  /* 내가 속한 집을 찾는다. 없으면 새로 만들거나 코드로 참여한다. */
+  db.ref('userHouse/'+MYUID).once('value').then(function(hs){
+    var hid=hs.val();
+    if(!hid){ gateShow('gateStart'); return; }
+    HOUSE=hid;
+    return db.ref(ROOT+'/members/'+MYUID).once('value').then(function(s){
+      var m=s.val();
+      if(m && m.persona){
+        MYMEMBER=m; me=m.persona; try{localStorage.setItem('hp_who',me);}catch(e){}
+        return loadHouseMeta().then(function(){ gateHide(); startApp(); });
+      }
+      /* 집에는 등록됐는데 누구인지 안 골랐을 때 */
+      return loadHouseMeta().then(function(){ gateShow('gatePersona'); renderPersonaPick(null); });
+    });
+  }).catch(function(e){
+    gateShow('gateLogin','접속에 문제가 생겼어요. 다시 시도해 주세요');
+  });
 });
+
+/* 집마다 두 사람 이름이 다르다. 캐릭터 그림은 공용이고 이름만 집 설정에서 가져온다. */
+function loadHouseMeta(){
+  return db.ref(ROOT+'/meta').once('value').then(function(s){
+    var meta=s.val()||{};
+    HOUSE_META=meta;
+    var nm=meta.names||{};
+    if(nm.kh) MEMBERS.kh.name=nm.kh;
+    if(nm.jn) MEMBERS.jn.name=nm.jn;
+  }).catch(function(){});
+}
+var HOUSE_META={};
+
+/* 새 집 만들기 */
+function createHouse(n1,n2){
+  var u=firebase.auth().currentUser; if(!u) return;
+  var ref=db.ref('houses').push();
+  var hid=ref.key, code=newCode();
+  var payload={
+    meta:{ code:code, createdAt:Date.now(), createdBy:u.uid,
+           names:{ kh:(n1||'나'), jn:(n2||'가족') } },
+    members:{}, seeded:true
+  };
+  payload.members[u.uid]={persona:'kh', name:(n1||'나'), email:u.email||null, joinedAt:Date.now()};
+  gateShow('gateNew','만드는 중…');
+  ref.set(payload).then(function(){
+    return db.ref('houseCodes/'+code).set(hid);
+  }).then(function(){
+    return db.ref('userHouse/'+u.uid).set(hid);
+  }).then(function(){
+    HOUSE=hid; MYMEMBER=payload.members[u.uid]; me='kh';
+    try{ localStorage.setItem('hp_who','kh'); }catch(e){}
+    MEMBERS.kh.name=(n1||'나'); MEMBERS.jn.name=(n2||'가족');
+    HOUSE_META=payload.meta;
+    return seedDefaults();
+  }).then(function(){
+    gateHide(); startApp();
+  }).catch(function(e){
+    gateShow('gateNew','만들지 못했어요 · '+(e&&e.message||''));
+  });
+}
+
+/* 코드로 참여 */
+function joinHouse(code){
+  var u=firebase.auth().currentUser; if(!u) return;
+  code=(code||'').trim();
+  if(!/^\d{6}$/.test(code)){ gateShow('gateCode','6자리 숫자를 입력해 주세요'); return; }
+  gateShow('gateCode','확인 중…');
+  db.ref('houseCodes/'+code).once('value').then(function(s){
+    var hid=s.val();
+    if(!hid){ gateShow('gateCode','그런 코드는 없어요. 다시 확인해 주세요'); return; }
+    HOUSE=hid;
+    return db.ref('userHouse/'+u.uid).set(hid).then(function(){
+      return loadHouseMeta();
+    }).then(function(){
+      gateShow('gatePersona'); renderPersonaPick(code);
+    });
+  }).catch(function(e){
+    gateShow('gateCode','참여하지 못했어요 · '+(e&&e.message||''));
+  });
+}
 
 function renderPersonaPick(code){
   var box=gateEl('gatePersonaBtns'); box.innerHTML='';
@@ -429,22 +540,17 @@ function renderPersonaPick(code){
 }
 /* 첫 사용자는 코드 없이 시작(방을 여는 사람), 그 뒤로는 초대 코드가 있어야 들어온다 */
 function claimMember(persona, code){
-  var u=firebase.auth().currentUser; if(!u) return;
+  var u=firebase.auth().currentUser; if(!u || !HOUSE) return;
   var rec={persona:persona, name:MEMBERS[persona].name, email:u.email||null, joinedAt:Date.now()};
   if(code) rec.code=code;
   db.ref(ROOT+'/members/'+MYUID).set(rec).then(function(){
-    if(!code){ // 첫 사용자 → 초대 코드 생성
-      db.ref(ROOT+'/meta/code').once('value').then(function(cs){
-        if(!cs.val()) db.ref(ROOT+'/meta/code').set(newCode());
-      }).catch(function(){});
-    }
     MYMEMBER=rec; me=persona; try{localStorage.setItem('hp_who',me);}catch(e){}
     gateHide(); startApp();
-  }).catch(function(){
-    gateShow('gateCode','이미 사용 중인 집이에요. 초대 코드를 입력해 주세요');
+  }).catch(function(e){
+    gateShow('gatePersona','등록하지 못했어요 · '+(e&&e.message||''));
   });
 }
-const MEMBERS={
+var MEMBERS={
   kh:{name:'관형',color:'#6366f1',light:'#eef2ff',dark:'#4338ca',
     svg:'<ellipse cx="21" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(-12,21,36)"/><ellipse cx="59" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(12,59,36)"/><ellipse cx="40" cy="46" rx="22" ry="20" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><ellipse cx="40" cy="53" rx="12" ry="9" fill="#fde68a"/><circle cx="32" cy="41" r="5" fill="#fff"/><circle cx="48" cy="41" r="5" fill="#fff"/><circle cx="33" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="49" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="34" cy="41" r="1.2" fill="#fff"/><circle cx="50" cy="41" r="1.2" fill="#fff"/><ellipse cx="40" cy="50" rx="4" ry="3" fill="#92400e"/><path d="M36 54 Q40 58 44 54" stroke="#78350f" stroke-width="1.5" fill="none" stroke-linecap="round"/>'},
   jn:{name:'주니',color:'#f59e0b',light:'#fffbeb',dark:'#b45309',
@@ -954,7 +1060,37 @@ function openWho(){
     b.onclick=function(){me=p;localStorage.setItem('hp_who',p);document.getElementById('whoBg').classList.remove('show');renderWho();};
     el.appendChild(b);
   });
+  renderInvite();
   document.getElementById('whoBg').classList.add('show');
+}
+
+/* 초대 코드 — 가족을 부르려면 이게 보여야 한다 */
+function renderInvite(){
+  var box=document.getElementById('invCode'); if(!box) return;
+  var code=(HOUSE_META&&HOUSE_META.code)||'';
+  if(!code){
+    db.ref(ROOT+'/meta/code').once('value').then(function(s){
+      var c=s.val(); if(c){ HOUSE_META.code=c; box.textContent=c; }
+    }).catch(function(){});
+    box.textContent='------';
+  } else box.textContent=code;
+
+  var msg=document.getElementById('invMsg');
+  function say(t){ if(msg){ msg.textContent=t; setTimeout(function(){ if(msg.textContent===t) msg.textContent=''; },2200); } }
+  var cp=document.getElementById('invCopy');
+  if(cp) cp.onclick=function(){
+    var c=box.textContent;
+    if(navigator.clipboard) navigator.clipboard.writeText(c).then(function(){ say('복사했어요'); }).catch(function(){ say(c); });
+    else say(c);
+  };
+  var sh=document.getElementById('invShare');
+  if(sh) sh.onclick=function(){
+    var c=box.textContent;
+    var text='우리집 플래너에 같이 쓰자! 초대 코드: '+c+'\n'+location.origin+location.pathname;
+    if(navigator.share) navigator.share({title:'우리집 플래너 초대', text:text}).catch(function(){});
+    else if(navigator.clipboard) navigator.clipboard.writeText(text).then(function(){ say('초대 문구를 복사했어요'); });
+    else say(c);
+  };
 }
 function renderWho(){
   if(me&&MEMBERS[me]){
@@ -1041,6 +1177,21 @@ function startApp(){
   seedIfEmpty();
   registerPush(); updatePushBtn(); renderWho();
 }
+/* 새로 만든 집에 기본 집안일을 넣어준다 */
+function seedDefaults(){
+  var ck=todayK();
+  var defaults=[
+    {name:'설거지',emoji:'🍽️',freq:'daily',owner:'any',createdK:ck},
+    {name:'바닥 청소',emoji:'🧹',freq:'days',days:[0,3],owner:'any',createdK:ck},
+    {name:'분리수거',emoji:'♻️',freq:'days',days:[0],owner:'any',createdK:ck},
+    {name:'빨래',emoji:'👕',freq:'weekly',owner:'any',createdK:ck},
+    {name:'화장실 청소',emoji:'🚽',freq:'weekly',owner:'any',createdK:ck},
+    {name:'침구 세탁',emoji:'🛏️',freq:'monthly',owner:'any',createdK:ck}
+  ];
+  var ups={};
+  defaults.forEach(function(r){ ups[db.ref(ROOT+'/routines').push().key]=r; });
+  return db.ref(ROOT+'/routines').update(ups);
+}
 function seedIfEmpty(){
 db.ref(ROOT+'/seeded').once('value',function(s){
   if(s.val())return;
@@ -1096,7 +1247,7 @@ async function enablePush(){
     if(!sub){sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToU8(VAPID_PUBLIC)});}
     var id=localStorage.getItem('hp_devid');
     if(!id){id=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('hp_devid',id);}
-    await db.ref(ROOT+'/pushSubs/'+id).set({sub:JSON.parse(JSON.stringify(sub)),who:me||'any',ts:Date.now()});
+    await db.ref('pushSubs/'+id).set({sub:JSON.parse(JSON.stringify(sub)),who:me||'any',house:HOUSE,ts:Date.now()});
     alert('알림이 켜졌어요! 🔔\n매일 아침 9시에 오늘 할 일을 보내드릴게요.');
     updatePushBtn();
   }catch(e){
@@ -1119,11 +1270,18 @@ document.getElementById('gLoginBtn').onclick=function(){
     });
 };
 document.getElementById('gJoinBtn').onclick=function(){
-  var c=(document.getElementById('gateCodeInput').value||'').trim();
-  if(!/^\d{6}$/.test(c)){ gateEl('gateMsg').textContent='6자리 숫자 코드를 입력해 주세요'; return; }
-  gateShow('gatePersona'); renderPersonaPick(c);
+  joinHouse((document.getElementById('gateCodeInput').value||'').trim());
 };
 document.getElementById('gLogoutBtn').onclick=function(){ firebase.auth().signOut(); };
+(function(){
+  var q=function(id){ return document.getElementById(id); };
+  if(q('gLogoutBtn2')) q('gLogoutBtn2').onclick=function(){ firebase.auth().signOut(); };
+  if(q('gNewBtn')) q('gNewBtn').onclick=function(){ gateShow('gateNew'); setTimeout(function(){ q('newN1').focus(); },80); };
+  if(q('gHaveCodeBtn')) q('gHaveCodeBtn').onclick=function(){ gateShow('gateCode'); setTimeout(function(){ q('gateCodeInput').focus(); },80); };
+  if(q('gBackBtn')) q('gBackBtn').onclick=function(){ gateShow('gateStart'); };
+  if(q('gBackBtn2')) q('gBackBtn2').onclick=function(){ gateShow('gateStart'); };
+  if(q('gCreateBtn')) q('gCreateBtn').onclick=function(){ createHouse(q('newN1').value.trim(), q('newN2').value.trim()); };
+})();
 setInterval(function(){renderAll();renderNotifs();},60000);
 </script>
 <!-- ===== ourLog: 계정 삭제 링크 (공통) ===== -->
