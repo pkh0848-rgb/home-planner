@@ -138,6 +138,17 @@ header p{font-size:.82rem;opacity:.9;margin-top:3px}
 .sec-title{font-weight:800;font-size:.92rem}
 .sec-sub{font-size:.7rem;color:var(--muted);font-weight:500}
 .sec.overdue{border:1.5px solid #fecaca;background:#fffbfb}
+.nm-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.nm-lb{width:52px;flex:0 0 auto;font-size:12.5px;font-weight:800;color:#7b8a83}
+.nm-in{flex:1;min-width:0;border:1px solid #dfe8e2;border-radius:10px;padding:9px 11px;
+  font-size:14px;outline:none;font-family:inherit}
+.nm-in:focus{border-color:#22a06b}
+.leave-b{width:100%;border:1px solid #f0d5d0;background:#fff;color:#c0503c;
+  border-radius:11px;padding:11px 8px;font-size:13px;font-weight:800;cursor:pointer}
+.leave-b:active{transform:scale(.98)}
+.who-btn.taken{opacity:.5;cursor:not-allowed;background:#f6f7f6}
+.who-btn .taken-tag{font-size:10.5px;font-weight:800;color:#8b968f;background:#e9edea;
+  border-radius:999px;padding:2px 8px;margin-top:5px;display:inline-block}
 .inv-sec{margin-top:20px;padding-top:16px;border-top:1px solid #e8efe9}
 .inv-h{font-size:13.5px;font-weight:800;margin-bottom:3px}
 .inv-sub{font-size:12px;color:#7b8a83;margin:0 0 10px}
@@ -356,6 +367,17 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div class="who-btns" id="whoBtns"></div>
 
     <div class="inv-sec">
+      <div class="inv-h">✏️ 이름 바꾸기</div>
+      <p class="inv-sub">우리집에서 부르는 이름이에요</p>
+      <div class="nm-row"><span class="nm-lb" id="nmLb1">-</span>
+        <input class="nm-in" id="nmIn1" maxlength="8" placeholder="이름"/></div>
+      <div class="nm-row"><span class="nm-lb" id="nmLb2">-</span>
+        <input class="nm-in" id="nmIn2" maxlength="8" placeholder="이름"/></div>
+      <button class="inv-b" id="nmSave" style="width:100%;margin-top:8px">이름 저장</button>
+      <p class="inv-msg" id="nmMsg"></p>
+    </div>
+
+    <div class="inv-sec">
       <div class="inv-h">🔑 가족 초대하기</div>
       <p class="inv-sub">이 코드를 알려주면 같은 집으로 들어올 수 있어요</p>
       <div class="inv-code" id="invCode">------</div>
@@ -364,6 +386,12 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
         <button class="inv-b primary" id="invShare">📤 공유하기</button>
       </div>
       <p class="inv-msg" id="invMsg"></p>
+    </div>
+
+    <div class="inv-sec">
+      <button class="leave-b" id="leaveHouse">🚪 이 집에서 나가기</button>
+      <p class="inv-sub" style="text-align:center;margin:7px 0 0">
+        나가면 이 집의 기록은 남고, 나만 빠져요</p>
     </div>
   </div>
 </div>
@@ -529,13 +557,37 @@ function joinHouse(code){
 }
 
 function renderPersonaPick(code){
-  var box=gateEl('gatePersonaBtns'); box.innerHTML='';
-  MK.forEach(function(pk){
-    var m=MEMBERS[pk];
-    var b=document.createElement('button'); b.className='who-btn';
-    b.innerHTML='<div style="width:54px;height:54px;margin:0 auto">'+mkAva(pk,54)+'</div><div class="nm" style="color:'+m.dark+'">'+m.name+'</div>';
-    b.onclick=function(){ claimMember(pk, code); };
-    box.appendChild(b);
+  var box=gateEl('gatePersonaBtns'); box.innerHTML='<p class="gate-sub">불러오는 중…</p>';
+  /* 이미 다른 사람이 쓰고 있는 자리는 고를 수 없다. 두 사람이 한 이름으로 겹치면
+     누가 했는지 구분이 안 되기 때문. */
+  db.ref(ROOT+'/members').once('value').then(function(s){
+    var taken={}, mem=s.val()||{};
+    Object.keys(mem).forEach(function(uid){
+      if(uid!==MYUID && mem[uid] && mem[uid].persona) taken[mem[uid].persona]=mem[uid];
+    });
+    box.innerHTML='';
+    var free=0;
+    MK.forEach(function(pk){
+      var m=MEMBERS[pk], t=taken[pk];
+      var b=document.createElement('button');
+      b.className='who-btn'+(t?' taken':'');
+      b.innerHTML='<div style="width:54px;height:54px;margin:0 auto">'+mkAva(pk,54)+'</div>'
+        + '<div class="nm" style="color:'+(t?'#9aa5a0':m.dark)+'">'+m.name+'</div>'
+        + (t?'<div class="taken-tag">이미 쓰는 중</div>':'');
+      if(t){ b.disabled=true; }
+      else { free++; b.onclick=function(){ claimMember(pk, code); }; }
+      box.appendChild(b);
+    });
+    if(!free){
+      var p=document.createElement('p'); p.className='gate-sub'; p.style.marginTop='12px';
+      p.innerHTML='두 자리가 모두 차 있어요.<br/>가족에게 확인하거나 새 집을 만들어 주세요.';
+      box.appendChild(p);
+      var nb=document.createElement('button'); nb.className='gate-link'; nb.textContent='← 처음으로';
+      nb.onclick=function(){ gateShow('gateStart'); };
+      box.appendChild(nb);
+    }
+  }).catch(function(){
+    box.innerHTML='<p class="gate-sub">불러오지 못했어요. 새로고침해 주세요.</p>';
   });
 }
 /* 첫 사용자는 코드 없이 시작(방을 여는 사람), 그 뒤로는 초대 코드가 있어야 들어온다 */
@@ -1061,8 +1113,49 @@ function openWho(){
     el.appendChild(b);
   });
   renderInvite();
+  renderHouseSettings();
   document.getElementById('whoBg').classList.add('show');
 }
+
+/* 이름 바꾸기 · 집 나가기 */
+function renderHouseSettings(){
+  var l1=document.getElementById('nmLb1'), l2=document.getElementById('nmLb2');
+  var i1=document.getElementById('nmIn1'), i2=document.getElementById('nmIn2');
+  if(!i1||!i2) return;
+  l1.textContent='첫째'; l2.textContent='둘째';
+  i1.value=MEMBERS.kh.name||''; i2.value=MEMBERS.jn.name||'';
+  var msg=document.getElementById('nmMsg');
+  function say(t){ if(msg){ msg.textContent=t; setTimeout(function(){ if(msg.textContent===t) msg.textContent=''; },2200); } }
+  var sv=document.getElementById('nmSave');
+  if(sv) sv.onclick=function(){
+    var n1=(i1.value||'').trim(), n2=(i2.value||'').trim();
+    if(!n1||!n2){ say('두 이름 모두 적어주세요'); return; }
+    db.ref(ROOT+'/meta/names').set({kh:n1, jn:n2}).then(function(){
+      MEMBERS.kh.name=n1; MEMBERS.jn.name=n2;
+      HOUSE_META.names={kh:n1,jn:n2};
+      /* 멤버 기록에 남은 이름도 맞춰준다 */
+      var ups={};
+      Object.keys(MEM_CACHE||{}).forEach(function(uid){
+        var m=MEM_CACHE[uid]; if(!m||!m.persona) return;
+        ups[uid+'/name']=(m.persona==='kh'?n1:n2);
+      });
+      if(Object.keys(ups).length) db.ref(ROOT+'/members').update(ups).catch(function(){});
+      renderWho(); openWho();
+      say('바꿨어요');
+    }).catch(function(e){ say('저장하지 못했어요'); });
+  };
+
+  var lv=document.getElementById('leaveHouse');
+  if(lv) lv.onclick=function(){
+    if(!confirm('이 집에서 나갈까요?\n내 기록은 집에 남고, 나만 빠져요.')) return;
+    var u=firebase.auth().currentUser; if(!u) return;
+    db.ref(ROOT+'/members/'+MYUID).remove().then(function(){
+      return db.ref('userHouse/'+MYUID).remove();
+    }).then(function(){ location.reload(); })
+     .catch(function(e){ alert('나가지 못했어요: '+(e&&e.message||'')); });
+  };
+}
+var MEM_CACHE={};
 
 /* 초대 코드 — 가족을 부르려면 이게 보여야 한다 */
 function renderInvite(){
@@ -1168,6 +1261,7 @@ function ensureMonthListener(){
 document.addEventListener('visibilitychange',function(){if(!document.hidden){ensureWeekListener();ensureMonthListener();}});
 /* 로그인·멤버 확인이 끝난 뒤에만 데이터를 붙인다 */
 function startApp(){
+  db.ref(ROOT+'/members').on('value',function(s){ MEM_CACHE=s.val()||{}; });
   if(APP_STARTED) return; APP_STARTED=true;
   db.ref(ROOT+'/routines').on('value',function(s){routines=s.val()||{};renderAll();checkLoaded();});
   var start=new Date();start.setDate(start.getDate()-40);var sk=kStr(start);listenStartK=sk;
