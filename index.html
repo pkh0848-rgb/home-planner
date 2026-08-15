@@ -138,6 +138,24 @@ header p{font-size:.82rem;opacity:.9;margin-top:3px}
 .sec-title{font-weight:800;font-size:.92rem}
 .sec-sub{font-size:.7rem;color:var(--muted);font-weight:500}
 .sec.overdue{border:1.5px solid #fecaca;background:#fffbfb}
+.seg.seg-wrap{flex-wrap:wrap}
+.seg.seg-wrap button{flex:1 1 auto;min-width:82px}
+.seat-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;background:#f8faf9;
+  border:1px solid #e6ede9;border-radius:12px;padding:8px 9px}
+.seat-av{width:38px;height:38px;flex:0 0 auto;border-radius:50%;background:#fff;border:1px solid #e6ede9;
+  display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+.seat-in{flex:1;min-width:0;border:1px solid #dfe8e2;border-radius:9px;padding:8px 10px;
+  font-size:14px;outline:none;font-family:inherit;background:#fff}
+.seat-in:focus{border-color:#22a06b}
+.seat-me{font-size:10.5px;font-weight:800;color:#22a06b;background:#e7f6ee;
+  border-radius:999px;padding:3px 7px;flex:0 0 auto}
+.seat-x{width:28px;height:28px;flex:0 0 auto;border:none;background:none;color:#c0503c;
+  font-size:16px;cursor:pointer;border-radius:8px}
+.seat-x:disabled{color:#cfd8d3;cursor:not-allowed}
+.avp{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.avp button{width:34px;height:34px;border-radius:50%;border:1px solid #e6ede9;background:#fff;
+  font-size:18px;cursor:pointer}
+.avp button.on{border-color:#22a06b;background:#e7f6ee}
 .nm-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .nm-lb{width:52px;flex:0 0 auto;font-size:12.5px;font-weight:800;color:#7b8a83}
 .nm-in{flex:1;min-width:0;border:1px solid #dfe8e2;border-radius:10px;padding:9px 11px;
@@ -367,13 +385,10 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div class="who-btns" id="whoBtns"></div>
 
     <div class="inv-sec">
-      <div class="inv-h">✏️ 이름 바꾸기</div>
-      <p class="inv-sub">우리집에서 부르는 이름이에요</p>
-      <div class="nm-row"><span class="nm-lb" id="nmLb1">-</span>
-        <input class="nm-in" id="nmIn1" maxlength="8" placeholder="이름"/></div>
-      <div class="nm-row"><span class="nm-lb" id="nmLb2">-</span>
-        <input class="nm-in" id="nmIn2" maxlength="8" placeholder="이름"/></div>
-      <button class="inv-b" id="nmSave" style="width:100%;margin-top:8px">이름 저장</button>
+      <div class="inv-h">👨‍👩‍👧 우리집 사람들</div>
+      <p class="inv-sub">이름과 캐릭터를 바꾸거나 가족을 더 넣을 수 있어요</p>
+      <div id="seatList"></div>
+      <button class="inv-b" id="seatAdd" style="width:100%;margin-top:8px">＋ 사람 추가</button>
       <p class="inv-msg" id="nmMsg"></p>
     </div>
 
@@ -425,11 +440,7 @@ table.wk{width:100%;border-collapse:collapse;font-size:.72rem;min-width:360px}
     <div id="optDom" class="opt-box" style="display:none;margin-top:8px">매달 <input type="number" class="dom-inp" id="xDom" min="1" max="31" value="1"/> 일 (말일보다 크면 말일에 떠요)</div>
     <div id="optMonthWeek" class="opt-box" style="display:none;margin-top:8px;flex-wrap:wrap">매달 <div class="daypick" id="nthPick"></div> 주 <select class="f-inp" id="xWd" style="flex:0 0 84px;min-width:84px"></select>요일</div>
     <div class="f-label" style="margin-top:10px">담당</div>
-    <div class="seg" id="xOwnSeg" style="margin-top:6px">
-      <button data-o="any" class="on">같이 / 아무나</button>
-      <button data-o="kh"></button>
-      <button data-o="jn"></button>
-    </div>
+    <div class="seg seg-wrap" id="xOwnSeg" style="margin-top:6px"></div>
     <div id="xMsg" style="font-size:.74rem;color:#dc2626;min-height:14px;text-align:center;margin-top:6px"></div>
     <div class="mfooter"><button class="mbtn mno" onclick="document.getElementById('addBg').classList.remove('show')">취소</button><button class="mbtn mok" id="addOkBtn" onclick="addUnified()">추가하기</button></div>
   </div>
@@ -497,12 +508,20 @@ firebase.auth().onAuthStateChanged(function(u){
 
 /* 집마다 두 사람 이름이 다르다. 캐릭터 그림은 공용이고 이름만 집 설정에서 가져온다. */
 function loadHouseMeta(){
-  return db.ref(ROOT+'/meta').once('value').then(function(s){
-    var meta=s.val()||{};
-    HOUSE_META=meta;
-    var nm=meta.names||{};
-    if(nm.kh) MEMBERS.kh.name=nm.kh;
-    if(nm.jn) MEMBERS.jn.name=nm.jn;
+  return db.ref(ROOT).child('meta').once('value').then(function(s){
+    HOUSE_META=s.val()||{};
+    return db.ref(ROOT+'/seats').once('value');
+  }).then(function(ss){
+    var seats=ss.val();
+    if(seats && Object.keys(seats).length){ applySeats(seats); return; }
+    /* 사람 목록이 없던 옛 집 — 예전 두 사람 설정을 그대로 옮겨준다 */
+    var nm=(HOUSE_META.names)||{};
+    var seed={
+      kh:{name:nm.kh||'첫째', avatar:'🐻', order:0},
+      jn:{name:nm.jn||'둘째', avatar:'🐱', order:1}
+    };
+    applySeats(seed);
+    return db.ref(ROOT+'/seats').set(seed).catch(function(){});
   }).catch(function(){});
 }
 var HOUSE_META={};
@@ -513,8 +532,9 @@ function createHouse(n1,n2){
   var ref=db.ref('houses').push();
   var hid=ref.key, code=newCode();
   var payload={
-    meta:{ code:code, createdAt:Date.now(), createdBy:u.uid,
-           names:{ kh:(n1||'나'), jn:(n2||'가족') } },
+    meta:{ code:code, createdAt:Date.now(), createdBy:u.uid },
+    seats:{ kh:{name:(n1||'나'), avatar:'🐻', order:0, uid:u.uid},
+            jn:{name:(n2||'가족'), avatar:'🐱', order:1} },
     members:{}, seeded:true
   };
   payload.members[u.uid]={persona:'kh', name:(n1||'나'), email:u.email||null, joinedAt:Date.now()};
@@ -526,7 +546,7 @@ function createHouse(n1,n2){
   }).then(function(){
     HOUSE=hid; MYMEMBER=payload.members[u.uid]; me='kh';
     try{ localStorage.setItem('hp_who','kh'); }catch(e){}
-    MEMBERS.kh.name=(n1||'나'); MEMBERS.jn.name=(n2||'가족');
+    applySeats(payload.seats);
     HOUSE_META=payload.meta;
     return seedDefaults();
   }).then(function(){
@@ -565,6 +585,7 @@ function renderPersonaPick(code){
     Object.keys(mem).forEach(function(uid){
       if(uid!==MYUID && mem[uid] && mem[uid].persona) taken[mem[uid].persona]=mem[uid];
     });
+    MK.forEach(function(k){ var st=MEMBERS[k]; if(st && st.uid && st.uid!==MYUID) taken[k]=st; });
     box.innerHTML='';
     var free=0;
     MK.forEach(function(pk){
@@ -596,25 +617,50 @@ function claimMember(persona, code){
   var rec={persona:persona, name:MEMBERS[persona].name, email:u.email||null, joinedAt:Date.now()};
   if(code) rec.code=code;
   db.ref(ROOT+'/members/'+MYUID).set(rec).then(function(){
+    return db.ref(ROOT+'/seats/'+persona+'/uid').set(MYUID).catch(function(){});
+  }).then(function(){
+    if(MEMBERS[persona]) MEMBERS[persona].uid=MYUID;
     MYMEMBER=rec; me=persona; try{localStorage.setItem('hp_who',me);}catch(e){}
     gateHide(); startApp();
   }).catch(function(e){
     gateShow('gatePersona','등록하지 못했어요 · '+(e&&e.message||''));
   });
 }
-var MEMBERS={
-  kh:{name:'관형',color:'#6366f1',light:'#eef2ff',dark:'#4338ca',
-    svg:'<ellipse cx="21" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(-12,21,36)"/><ellipse cx="59" cy="36" rx="10" ry="14" fill="#d97706" transform="rotate(12,59,36)"/><ellipse cx="40" cy="46" rx="22" ry="20" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><ellipse cx="40" cy="53" rx="12" ry="9" fill="#fde68a"/><circle cx="32" cy="41" r="5" fill="#fff"/><circle cx="48" cy="41" r="5" fill="#fff"/><circle cx="33" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="49" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="34" cy="41" r="1.2" fill="#fff"/><circle cx="50" cy="41" r="1.2" fill="#fff"/><ellipse cx="40" cy="50" rx="4" ry="3" fill="#92400e"/><path d="M36 54 Q40 58 44 54" stroke="#78350f" stroke-width="1.5" fill="none" stroke-linecap="round"/>'},
-  jn:{name:'주니',color:'#f59e0b',light:'#fffbeb',dark:'#b45309',
-    svg:'<ellipse cx="22" cy="28" rx="9" ry="10" fill="#fbbf24"/><ellipse cx="58" cy="28" rx="9" ry="10" fill="#fbbf24"/><ellipse cx="22" cy="28" rx="6" ry="7" fill="#fde68a"/><ellipse cx="58" cy="28" rx="6" ry="7" fill="#fde68a"/><ellipse cx="40" cy="46" rx="23" ry="21" fill="#fef3c7" stroke="#fbbf24" stroke-width="2"/><ellipse cx="28" cy="51" rx="9" ry="7" fill="#fde68a"/><ellipse cx="52" cy="51" rx="9" ry="7" fill="#fde68a"/><circle cx="32" cy="41" r="5" fill="#fff"/><circle cx="48" cy="41" r="5" fill="#fff"/><circle cx="33" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="49" cy="42" r="3.5" fill="#1e1b4b"/><circle cx="34" cy="41" r="1.3" fill="#fff"/><circle cx="50" cy="41" r="1.3" fill="#fff"/><ellipse cx="40" cy="48" rx="3" ry="2" fill="#f9a8d4"/><path d="M37 52 Q40 55 43 52" stroke="#d97706" stroke-width="1.5" fill="none" stroke-linecap="round"/>'}
-};
-const MK=['kh','jn'];
+/* 집 사람 목록. 인원 제한 없이 집 설정(seats)에서 불러온다.
+   기존 기록은 사람 id('kh','jn')로 저장돼 있어 그 id를 그대로 쓴다. */
+var MEMBERS={};
+var MK=[];
+var AVATARS=['🐻','🐱','🐰','🐶','🦊','🐼','🐨','🐯','🐹','🐸','🐧','🦁','🐮','🐷','🐔','🦉'];
+var PALETTE=[
+  ['#6366f1','#eef2ff','#4338ca'], ['#f59e0b','#fffbeb','#b45309'],
+  ['#10b981','#ecfdf5','#047857'], ['#ec4899','#fdf2f8','#be185d'],
+  ['#8b5cf6','#f5f3ff','#6d28d9'], ['#06b6d4','#ecfeff','#0e7490'],
+  ['#ef4444','#fef2f2','#b91c1c'], ['#84cc16','#f7fee7','#4d7c0f']
+];
+function applySeats(seats){
+  MEMBERS={}; MK=[];
+  var ks=Object.keys(seats||{}).sort(function(a,b){
+    return ((seats[a].order||0)-(seats[b].order||0)) || (a<b?-1:1);
+  });
+  ks.forEach(function(k,idx){
+    var st=seats[k]||{}, pal=PALETTE[idx%PALETTE.length];
+    MEMBERS[k]={ name:st.name||'가족', avatar:st.avatar||AVATARS[idx%AVATARS.length],
+      uid:st.uid||null, order:(st.order!=null?st.order:idx),
+      color:pal[0], light:pal[1], dark:pal[2] };
+    MK.push(k);
+  });
+}
 const WD=['일','월','화','수','목','금','토'];
 const pad=n=>String(n).padStart(2,'0');
 function kStr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function todayK(){return kStr(new Date());}
 function parseK(k){var p=k.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
-function mkAva(p,sz){return '<svg viewBox="0 0 80 80" style="width:'+sz+'px;height:'+sz+'px;display:block">'+MEMBERS[p].svg+'</svg>';}
+function mkAva(p,sz){
+  var m=MEMBERS[p]||{};
+  return '<span style="display:inline-flex;align-items:center;justify-content:center;'
+    + 'width:'+sz+'px;height:'+sz+'px;font-size:'+Math.round(sz*0.72)+'px;line-height:1">'
+    + (m.avatar||'🙂') + '</span>';
+}
 function josa(n,a,b){var c=n.charCodeAt(n.length-1);if(c<0xAC00||c>0xD7A3)return a;return (c-0xAC00)%28>0?a:b;}
 let me=localStorage.getItem('hp_who');
 if(me&&!MEMBERS[me])me=null;
@@ -625,7 +671,8 @@ let calY=new Date().getFullYear(),calM=new Date().getMonth();
 let monthCache={};
 function ownBdg(o){
   if(o==='any'||!o)return '<span class="own-bdg" style="background:#f3f4f6;color:#6b7280">같이</span>';
-  var m=MEMBERS[o];return '<span class="own-bdg" style="background:'+m.light+';color:'+m.dark+'">'+m.name+'</span>';
+  var m=MEMBERS[o]; if(!m) return '';
+  return '<span class="own-bdg" style="background:'+m.light+';color:'+m.dark+'">'+m.name+'</span>';
 }
 var NTHK=['','첫째','둘째','셋째','넷째'];
 function freqLabel(r){
@@ -1080,10 +1127,18 @@ function initAddForm(){
     b.onclick=function(){var ix=xNths.indexOf(n);if(ix>=0){xNths.splice(ix,1);b.classList.remove('on');}else{xNths.push(n);b.classList.add('on');}};
     np.appendChild(b);
   });
-  var os=document.querySelectorAll('#xOwnSeg button');
-  os[1].textContent=MEMBERS.kh.name;os[2].textContent=MEMBERS.jn.name;
-  os.forEach(function(b){
-    b.onclick=function(){xOwn=b.dataset.o;os.forEach(function(x){x.classList.remove('on');});b.classList.add('on');};
+  /* 담당은 집 사람 수에 맞춰 만든다 */
+  var seg=document.getElementById('xOwnSeg'); seg.innerHTML='';
+  var opts=[{o:'any',t:'같이 / 아무나'}].concat(MK.map(function(k){ return {o:k, t:(MEMBERS[k].avatar||'')+' '+MEMBERS[k].name}; }));
+  opts.forEach(function(op){
+    var b=document.createElement('button'); b.dataset.o=op.o; b.textContent=op.t;
+    if(op.o===xOwn) b.className='on';
+    b.onclick=function(){
+      xOwn=op.o;
+      seg.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    };
+    seg.appendChild(b);
   });
 }
 /* ───── manage list ───── */
@@ -1092,7 +1147,7 @@ function renderRtList(){
   var h='';
   Object.keys(routines).forEach(function(id){
     var r=routines[id];
-    h+='<div class="rt-row" onclick="openAdd(null,\''+id+'\')" style="cursor:pointer"><div class="rt-info"><div class="rt-name">'+(r.emoji?r.emoji+' ':'')+r.name+'</div><div class="rt-meta">'+freqLabel(r)+' · '+(r.owner==='any'?'같이':MEMBERS[r.owner].name)+'</div></div>'+ownBdg(r.owner)+'<button class="rt-del" onclick="event.stopPropagation();delRoutine(\''+id+'\')">×</button></div>';
+    h+='<div class="rt-row" onclick="openAdd(null,\''+id+'\')" style="cursor:pointer"><div class="rt-info"><div class="rt-name">'+(r.emoji?r.emoji+' ':'')+r.name+'</div><div class="rt-meta">'+freqLabel(r)+' · '+(r.owner==='any'||!MEMBERS[r.owner]?'같이':MEMBERS[r.owner].name)+'</div></div>'+ownBdg(r.owner)+'<button class="rt-del" onclick="event.stopPropagation();delRoutine(\''+id+'\')">×</button></div>';
   });
   document.getElementById('rtList').innerHTML=h||'<div class="empty-row">아직 반복 루틴이 없어요</div>';
 }
@@ -1117,32 +1172,82 @@ function openWho(){
   document.getElementById('whoBg').classList.add('show');
 }
 
-/* 이름 바꾸기 · 집 나가기 */
+/* 우리집 사람들 — 추가·이름·캐릭터·삭제, 그리고 집 나가기 */
 function renderHouseSettings(){
-  var l1=document.getElementById('nmLb1'), l2=document.getElementById('nmLb2');
-  var i1=document.getElementById('nmIn1'), i2=document.getElementById('nmIn2');
-  if(!i1||!i2) return;
-  l1.textContent='첫째'; l2.textContent='둘째';
-  i1.value=MEMBERS.kh.name||''; i2.value=MEMBERS.jn.name||'';
+  var box=document.getElementById('seatList'); if(!box) return;
   var msg=document.getElementById('nmMsg');
   function say(t){ if(msg){ msg.textContent=t; setTimeout(function(){ if(msg.textContent===t) msg.textContent=''; },2200); } }
-  var sv=document.getElementById('nmSave');
-  if(sv) sv.onclick=function(){
-    var n1=(i1.value||'').trim(), n2=(i2.value||'').trim();
-    if(!n1||!n2){ say('두 이름 모두 적어주세요'); return; }
-    db.ref(ROOT+'/meta/names').set({kh:n1, jn:n2}).then(function(){
-      MEMBERS.kh.name=n1; MEMBERS.jn.name=n2;
-      HOUSE_META.names={kh:n1,jn:n2};
-      /* 멤버 기록에 남은 이름도 맞춰준다 */
-      var ups={};
-      Object.keys(MEM_CACHE||{}).forEach(function(uid){
-        var m=MEM_CACHE[uid]; if(!m||!m.persona) return;
-        ups[uid+'/name']=(m.persona==='kh'?n1:n2);
+
+  box.innerHTML='';
+  MK.forEach(function(k){
+    var m=MEMBERS[k];
+    var row=document.createElement('div'); row.className='seat-row';
+
+    var av=document.createElement('button'); av.className='seat-av'; av.textContent=m.avatar||'🙂';
+    av.title='캐릭터 바꾸기';
+    av.onclick=function(){
+      var pick=row.querySelector('.avp');
+      if(pick){ pick.remove(); return; }
+      var wrap=document.createElement('div'); wrap.className='avp';
+      AVATARS.forEach(function(a){
+        var b=document.createElement('button'); b.textContent=a;
+        if(a===m.avatar) b.className='on';
+        b.onclick=function(){
+          db.ref(ROOT+'/seats/'+k+'/avatar').set(a).then(function(){
+            m.avatar=a; av.textContent=a; wrap.remove(); renderWho(); renderAll(); say('바꿨어요');
+          }).catch(function(){ say('저장하지 못했어요'); });
+        };
+        wrap.appendChild(b);
       });
-      if(Object.keys(ups).length) db.ref(ROOT+'/members').update(ups).catch(function(){});
-      renderWho(); openWho();
-      say('바꿨어요');
-    }).catch(function(e){ say('저장하지 못했어요'); });
+      row.appendChild(wrap);
+    };
+
+    var inp=document.createElement('input'); inp.className='seat-in'; inp.maxLength=8; inp.value=m.name||'';
+    var save=function(){
+      var v=(inp.value||'').trim(); if(!v || v===m.name){ inp.value=m.name; return; }
+      db.ref(ROOT+'/seats/'+k+'/name').set(v).then(function(){
+        m.name=v;
+        /* 이 자리를 쓰는 계정의 이름도 맞춰준다 */
+        Object.keys(MEM_CACHE||{}).forEach(function(uid){
+          if(MEM_CACHE[uid] && MEM_CACHE[uid].persona===k) db.ref(ROOT+'/members/'+uid+'/name').set(v).catch(function(){});
+        });
+        renderWho(); renderAll(); say('바꿨어요');
+      }).catch(function(){ say('저장하지 못했어요'); });
+    };
+    inp.onblur=save;
+    inp.onkeydown=function(e){ if(e.key==='Enter'){ inp.blur(); } };
+
+    row.appendChild(av); row.appendChild(inp);
+    if(k===me){ var tag=document.createElement('span'); tag.className='seat-me'; tag.textContent='나'; row.appendChild(tag); }
+
+    var del=document.createElement('button'); del.className='seat-x'; del.textContent='✕'; del.title='이 사람 빼기';
+    /* 나 자신, 다른 계정이 쓰는 자리, 마지막 한 명은 뺄 수 없다 */
+    var inUse = (m.uid && m.uid!==MYUID) || k===me;
+    if(inUse || MK.length<=1){ del.disabled=true; }
+    else del.onclick=function(){
+      if(!confirm('「'+m.name+'」을(를) 우리집에서 뺄까요?\n지금까지의 기록은 그대로 남아요.')) return;
+      db.ref(ROOT+'/seats/'+k).remove().then(function(){
+        delete MEMBERS[k]; MK=MK.filter(function(x){ return x!==k; });
+        renderHouseSettings(); renderAll(); say('뺐어요');
+      }).catch(function(){ say('빼지 못했어요'); });
+    };
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+
+  var add=document.getElementById('seatAdd');
+  if(add) add.onclick=function(){
+    var used={}; MK.forEach(function(k){ used[MEMBERS[k].avatar]=1; });
+    var av=AVATARS.filter(function(a){ return !used[a]; })[0] || AVATARS[MK.length%AVATARS.length];
+    var key='m'+Date.now().toString(36);
+    var seat={name:'가족'+(MK.length+1), avatar:av, order:MK.length};
+    db.ref(ROOT+'/seats/'+key).set(seat).then(function(){
+      MEMBERS[key]=Object.assign({}, seat, {uid:null});
+      MK.push(key);
+      var pal=PALETTE[(MK.length-1)%PALETTE.length];
+      MEMBERS[key].color=pal[0]; MEMBERS[key].light=pal[1]; MEMBERS[key].dark=pal[2];
+      renderHouseSettings(); renderAll(); say('추가했어요 · 이름을 바꿔주세요');
+    }).catch(function(){ say('추가하지 못했어요'); });
   };
 
   var lv=document.getElementById('leaveHouse');
@@ -1150,8 +1255,10 @@ function renderHouseSettings(){
     if(!confirm('이 집에서 나갈까요?\n내 기록은 집에 남고, 나만 빠져요.')) return;
     var u=firebase.auth().currentUser; if(!u) return;
     db.ref(ROOT+'/members/'+MYUID).remove().then(function(){
+      if(me && MEMBERS[me] && MEMBERS[me].uid===MYUID) return db.ref(ROOT+'/seats/'+me+'/uid').remove().catch(function(){});
+    }).then(function(){
       return db.ref('userHouse/'+MYUID).remove();
-    }).then(function(){ location.reload(); })
+    }).then(function(){ try{ localStorage.removeItem('hp_who'); }catch(e){} location.reload(); })
      .catch(function(e){ alert('나가지 못했어요: '+(e&&e.message||'')); });
   };
 }
